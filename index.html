@@ -1,17 +1,7 @@
-Hello! I am your Coding Partner. My purpose is to help you build, fix, and understand code. Just share your projects or ideas with me, and I'll assist you in writing clean, successful code while breaking down how it works step-by-step. 
 
-I can absolutely help you make these updates! We will keep everything neatly contained within your single `index.html` file and continue using your `React.createElement` (`h`) structure without introducing any JSX or external build tools.
 
-### Overview of the Solution
 
-1.  **Yellow GPS Bar:** We will add a new `div` directly inside the `ProjView` component. This bar will sit at the very top of the app, checking the `gps.status` variable to display a highly visible yellow banner with the current coordinates or a warning if the signal is searching/lost.
-2.  **Photo Prompt:** We will modify the `onchange` event inside both of your photo upload functions (`CamBtn` for form inputs and `triggerCam` for the floating button). Before the image is processed into a canvas, we'll trigger a `window.prompt` asking "What is this photo of?". If the user cancels the prompt, we stop the upload; if they answer, the photo proceeds as normal.
 
-### The Complete Updated Code
-
-Here is your fully updated `index.html` file. You can copy and paste this directly over your existing file. 
-
-```html
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
@@ -841,4 +831,4 @@ function VacForm({onSubmit,onCancel,n,gps,init,editMode}){
 
 ReactDOM.render(h(App),document.getElementById("root"));
 </script></body></html>
-```
+
