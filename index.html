@@ -64,7 +64,7 @@
     function YellowGPSBar({gps}){
       const isLocked = gps.status === "locked";
       return h("div", {style: {background: isLocked ? "#facc15" : "#ef4444", color: "#000", padding: "6px 10px", fontSize: "11px", fontWeight: "900", textAlign: "center", display: "flex", justifyContent: "center", gap: "15px", borderBottom: "1.5px solid #000", zIndex: 100}},
-        h("span", null, isLocked ? "📍 GPS ACTIVE" : "🛰 SEARCHING..."),
+        h("span", null, isLocked ? "📍 GPS ACTIVE" : "🛰 SEARCHING GPS..."),
         isLocked && h("span", null, "LAT: " + gps.lat.toFixed(6)),
         isLocked && h("span", null, "LNG: " + gps.lng.toFixed(6))
       );
@@ -130,4 +130,3 @@
     }
     ReactDOM.render(h(App),document.getElementById("root"));
     </script></body></html>
-    
