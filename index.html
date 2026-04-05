@@ -1,3 +1,17 @@
+Hello! I am your Coding Partner. My purpose is to help you build, fix, and understand code. Just share your projects or ideas with me, and I'll assist you in writing clean, successful code while breaking down how it works step-by-step. 
+
+I can absolutely help you make these updates! We will keep everything neatly contained within your single `index.html` file and continue using your `React.createElement` (`h`) structure without introducing any JSX or external build tools.
+
+### Overview of the Solution
+
+1.  **Yellow GPS Bar:** We will add a new `div` directly inside the `ProjView` component. This bar will sit at the very top of the app, checking the `gps.status` variable to display a highly visible yellow banner with the current coordinates or a warning if the signal is searching/lost.
+2.  **Photo Prompt:** We will modify the `onchange` event inside both of your photo upload functions (`CamBtn` for form inputs and `triggerCam` for the floating button). Before the image is processed into a canvas, we'll trigger a `window.prompt` asking "What is this photo of?". If the user cancels the prompt, we stop the upload; if they answer, the photo proceeds as normal.
+
+### The Complete Updated Code
+
+Here is your fully updated `index.html` file. You can copy and paste this directly over your existing file. 
+
+```html
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
@@ -287,7 +301,10 @@ function Search({q,setQ}){return h("div",{style:{marginBottom:10}},h("input",{ty
 
 function CamBtn({onPhoto,label}){
   const snap=()=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";try{inp.setAttribute("capture","environment")}catch{}
-    inp.onchange=ev=>{const f=ev.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=re=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas");const sc=Math.min(400/img.width,400/img.height,1);c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);onPhoto(c.toDataURL("image/jpeg",.7))};img.src=re.target.result};r.readAsDataURL(f)};inp.click()};
+    inp.onchange=ev=>{const f=ev.target.files?.[0];if(!f)return;
+      const desc=window.prompt("What is this photo of?",label?label.replace("📷 ",""):"Photo");
+      if(desc===null)return;
+      const r=new FileReader();r.onload=re=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas");const sc=Math.min(400/img.width,400/img.height,1);c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);onPhoto(c.toDataURL("image/jpeg",.7))};img.src=re.target.result};r.readAsDataURL(f)};inp.click()};
   return h("button",{onClick:snap,type:"button",style:{background:"#dc2626",color:"#fff",borderRadius:10,padding:"14px",fontSize:13,fontWeight:800,width:"100%",minHeight:52,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}},
     h("svg",{width:20,height:20,viewBox:"0 0 24 24",fill:"none",stroke:"#fff",strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"},h("path",{d:"M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"}),h("circle",{cx:12,cy:13,r:4})),label||"📷 TAP TO CAPTURE PHOTO")}
 function PhotoPrev({photo,onClear}){return!photo?null:h("div",{style:{position:"relative",marginBottom:10}},h("img",{src:photo,style:{width:"100%",height:140,objectFit:"cover",borderRadius:10,border:"2px solid #334155"}}),h("button",{onClick:onClear,style:{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.7)",borderRadius:14,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,minHeight:28}},"✕"))}
@@ -348,7 +365,11 @@ function ProjView({proj,store,persist,flash,toast}){
   const up=useCallback(nd=>{persist({...store,projects:store.projects.map(p=>p.id===proj.id?{...p,data:nd}:p)})},[store,proj.id,persist]);
   const goHome=()=>{if(confirm("Switch project?"))persist({...store,active:null})};
   // Floating cam
-  const triggerCam=()=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";try{inp.setAttribute("capture","environment")}catch{}inp.onchange=ev=>{const f=ev.target.files?.[0];if(!f)return;const g=gps.stamp();const r=new FileReader();r.onload=re=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas");const sc=Math.min(400/img.width,400/img.height,1);c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);up({...d,captures:[...(d.captures||[]),{id:uid(),photo:c.toDataURL("image/jpeg",.7),gps:g,date:td(),time:nw()}]});flash("📷 Captured"+(g?" · GPS ✓":""))};img.src=re.target.result};r.readAsDataURL(f)};inp.click()};
+  const triggerCam=()=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";try{inp.setAttribute("capture","environment")}catch{}
+    inp.onchange=ev=>{const f=ev.target.files?.[0];if(!f)return;
+      const desc=window.prompt("What is this photo of?","General site photo");
+      if(desc===null)return;
+      const g=gps.stamp();const r=new FileReader();r.onload=re=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas");const sc=Math.min(400/img.width,400/img.height,1);c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);up({...d,captures:[...(d.captures||[]),{id:uid(),desc,photo:c.toDataURL("image/jpeg",.7),gps:g,date:td(),time:nw()}]});flash("📷 Captured: "+desc+(g?" · GPS ✓":""))};img.src=re.target.result};r.readAsDataURL(f)};inp.click()};
 
   const stats=useMemo(()=>{
     const totalArea=d.panels.reduce((a,x)=>a+(x.area||0),0);const tested=new Set(d.airTests.map(a=>a.seam));const punch=[];
@@ -361,6 +382,10 @@ function ProjView({proj,store,persist,flash,toast}){
   },[d]);
 
   return h("div",{style:{display:"flex",flexDirection:"column",height:"100vh",background:"#0f172a",overflow:"hidden",position:"relative"}},
+    // NEW: Yellow GPS Tracker Bar
+    h("div",{style:{background:"#facc15",color:"#000",padding:"6px 8px",textAlign:"center",fontSize:11,fontWeight:800,zIndex:50,flexShrink:0,boxShadow:"0 2px 10px rgba(0,0,0,0.5)",letterSpacing:0.5}},
+      gps.status === "locked" ? "📍 GPS ACTIVE: " + gps.lat.toFixed(5) + ", " + gps.lng.toFixed(5) + " (±" + Math.round(gps.acc) + "m)" : (gps.status === "searching" ? "⚠️ ACQUIRING GPS SIGNAL..." : "❌ GPS NO FIX / ERROR")
+    ),
     // Header
     h("div",{style:{background:"rgba(2,6,23,.75)",backdropFilter:"blur(20px) saturate(1.5)",WebkitBackdropFilter:"blur(20px) saturate(1.5)",borderBottom:"1px solid rgba(148,163,184,.08)",flexShrink:0,zIndex:20,paddingTop:"env(safe-area-inset-top,0px)"}},h("div",{style:{display:"flex",alignItems:"center",gap:5,padding:"8px 10px"}},
       h("button",{onClick:goHome,style:{background:"#1e293b",borderRadius:6,padding:"4px 8px",color:"#475569",fontSize:9,fontWeight:800,flexShrink:0,minHeight:28}},"⚙"),
@@ -379,7 +404,7 @@ function ProjView({proj,store,persist,flash,toast}){
     // Nav
     h("nav",{style:{position:"fixed",bottom:0,left:0,right:0,background:"rgba(2,6,23,.8)",backdropFilter:"blur(24px) saturate(1.5)",WebkitBackdropFilter:"blur(24px) saturate(1.5)",borderTop:"1px solid rgba(148,163,184,.08)",display:"flex",justifyContent:"space-around",paddingBottom:"env(safe-area-inset-bottom,8px)",paddingTop:6,zIndex:30}},
       [["map","◎","Map"],["today","☀","Today"],["panels","▭","Panels"],["tests","◈","Tests"],["qa","✓","QA"]].map(([id,ico,lbl])=>h("button",{key:id,onClick:()=>setTab(id),style:{display:"flex",flexDirection:"column",alignItems:"center",background:"none",padding:"6px 0",minWidth:56,minHeight:52,color:tab===id?"#60a5fa":"#475569"}},h("span",{style:{fontSize:22,lineHeight:1}},ico),h("span",{style:{fontSize:9,fontWeight:800,letterSpacing:.5,marginTop:2}},lbl)))),
-    toast&&h("div",{style:{position:"fixed",top:52,left:"50%",transform:"translateX(-50%)",background:"rgba(30,41,59,.75)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(74,222,128,.2)",borderRadius:14,padding:"8px 20px",fontSize:12,fontWeight:700,color:"#4ade80",zIndex:60,boxShadow:"0 8px 32px rgba(0,0,0,.5),0 0 20px rgba(74,222,128,.1)"}},toast));
+    toast&&h("div",{style:{position:"fixed",top:82,left:"50%",transform:"translateX(-50%)",background:"rgba(30,41,59,.75)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(74,222,128,.2)",borderRadius:14,padding:"8px 20px",fontSize:12,fontWeight:700,color:"#4ade80",zIndex:60,boxShadow:"0 8px 32px rgba(0,0,0,.5),0 0 20px rgba(74,222,128,.1)"}},toast));
 }
 
 // ════════════════════════════════════════════════════
@@ -816,3 +841,4 @@ function VacForm({onSubmit,onCancel,n,gps,init,editMode}){
 
 ReactDOM.render(h(App),document.getElementById("root"));
 </script></body></html>
+```
