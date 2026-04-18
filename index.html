@@ -3,28 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>LinerSync Simple Points</title>
+  <title>LinerSync Repair Points</title>
   <meta name="theme-color" content="#0b1220" />
   <style>
     :root{
       --bg:#0b1220; --panel:#121c31; --text:#eaf1ff; --muted:#9fb2d8;
-      --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15;
+      --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15; --purple:#c084fc;
     }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
     .app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
     .top{padding:10px;background:linear-gradient(180deg,#0f1830,#0b1220);border-bottom:1px solid var(--line)}
-    .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 10px}
-    .status{font-size:15px;color:var(--muted);margin-bottom:8px}
-    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
-    .exports{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 6px}
+    .status{font-size:15px;color:var(--muted);margin-bottom:8px;text-align:center}
+    .typebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .typebtn{border:1px solid var(--line);border-radius:16px;padding:14px 10px;font-size:16px;font-weight:800;color:var(--text);background:#16233e;cursor:pointer}
+    .typebtn.active{outline:3px solid rgba(250,204,21,.35);background:#22345b}
+    .captureRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
     button{border:0;border-radius:18px;padding:18px 12px;font-size:18px;font-weight:800;color:#07111f;cursor:pointer}
     .capture{background:var(--green)}
     .download{background:var(--blue)}
+    .exports{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
     .export{padding:12px 8px;font-size:14px}
     .csv{background:var(--blue)}
     .geojson{background:var(--gold)}
-    .kml{background:#c084fc}
+    .kml{background:var(--purple)}
     .clear{background:var(--red);color:white;padding:10px 14px;font-size:14px}
     #map{height:100%;width:100%}
     .bottom{padding:10px;background:linear-gradient(0deg,#0f1830,#0b1220);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -36,10 +39,14 @@
 <body>
 <div class="app">
   <div class="top">
-    <div class="title">LinerSync Simple Points</div>
-    <div id="perm" class="status">Tap allow location permission</div>
-    <div class="buttons">
-      <button class="capture" id="captureBtn">Tap to Capture</button>
+    <div class="title">LinerSync Repair Points</div>
+    <div id="perm" class="status">Allow location, choose repair type, then tap capture</div>
+    <div class="typebar">
+      <button class="typebtn active" id="beadBtn">Bead</button>
+      <button class="typebtn" id="patchBtn">Patch</button>
+    </div>
+    <div class="captureRow">
+      <button class="capture" id="captureBtn">Capture Repair</button>
       <button class="download" id="fitBtn">Fit Saved Points</button>
     </div>
     <div class="exports">
@@ -54,6 +61,7 @@
   <div class="bottom">
     <div class="pill" id="countPill">Points: 0</div>
     <div class="actions">
+      <div class="pill" id="typePill">Type: Bead</div>
       <button class="clear" id="clearBtn">Clear</button>
       <div class="pill" id="gpsPill">GPS: Waiting</div>
     </div>
@@ -62,13 +70,30 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-simple-points-v2";
+const STORAGE_KEY = "linersync-repair-points-v3";
 let points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 let map, markersLayer, currentMarker = null, lastPos = null;
+let repairType = "Bead";
+let repairCounts = countRepairTypes();
+
+function countRepairTypes(){
+  return points.reduce((acc,p)=>{
+    const t = p.repair_type || "Bead";
+    acc[t] = (acc[t] || 0) + 1;
+    return acc;
+  }, {Bead:0, Patch:0});
+}
 
 function savePoints(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
+  repairCounts = countRepairTypes();
   document.getElementById("countPill").textContent = `Points: ${points.length}`;
+}
+
+function updateTypeUI(){
+  document.getElementById("typePill").textContent = `Type: ${repairType}`;
+  document.getElementById("beadBtn").classList.toggle("active", repairType === "Bead");
+  document.getElementById("patchBtn").classList.toggle("active", repairType === "Patch");
 }
 
 function formatTime(ts){
@@ -78,12 +103,18 @@ function formatTime(ts){
   });
 }
 
-function isoTime(ts){
-  return new Date(ts).toISOString();
-}
+function isoTime(ts){ return new Date(ts).toISOString(); }
 
 function escapeHtml(s){
   return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function typeIndex(t){
+  return points.filter(p => (p.repair_type || "Bead") === t).length;
+}
+
+function nextRepairId(t){
+  return `${t === "Bead" ? "B" : "P"}-${String(typeIndex(t) + 1).padStart(3,"0")}`;
 }
 
 function fitSavedPoints(){
@@ -92,12 +123,23 @@ function fitSavedPoints(){
   map.fitBounds(group.getBounds().pad(0.2));
 }
 
+function markerColor(type){
+  return type === "Patch" ? "#c084fc" : "#facc15";
+}
+
 function renderPoints(){
   markersLayer.clearLayers();
   points.forEach((p, i) => {
-    const marker = L.marker([p.lat, p.lng]).addTo(markersLayer);
+    const marker = L.circleMarker([p.lat, p.lng], {
+      radius: 7,
+      color: "#0b1220",
+      weight: 1,
+      fillColor: markerColor(p.repair_type || "Bead"),
+      fillOpacity: 0.95
+    }).addTo(markersLayer);
     marker.bindPopup(`
-      <b>Point ${i + 1}</b><br>
+      <b>${escapeHtml(p.repair_id || `Point ${i+1}`)}</b><br>
+      Type: ${escapeHtml(p.repair_type || "Bead")}<br>
       Lat: ${p.lat.toFixed(7)}<br>
       Lng: ${p.lng.toFixed(7)}<br>
       Accuracy: ${Math.round(p.accuracy || 0)} m<br>
@@ -113,26 +155,19 @@ function setGps(text, ok=true){
   el.style.borderColor = ok ? "#29406f" : "#6b1f1f";
 }
 
-function setPerm(text){
-  document.getElementById("perm").textContent = text;
-}
+function setPerm(text){ document.getElementById("perm").textContent = text; }
 
 function initMap(){
   map = L.map('map');
   markersLayer = L.layerGroup().addTo(map);
-
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 22,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
-
   renderPoints();
-
-  if(points.length){
-    fitSavedPoints();
-  } else {
-    map.setView([33.3943, -104.5230], 5);
-  }
+  updateTypeUI();
+  if(points.length){ fitSavedPoints(); }
+  else { map.setView([33.3943, -104.5230], 5); }
 }
 
 function updateLivePosition(position){
@@ -140,12 +175,8 @@ function updateLivePosition(position){
   lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
   setGps(`${Math.round(accuracy)}m`, true);
   setPerm("Location permission allowed");
-
-  if(currentMarker){
-    currentMarker.setLatLng([latitude, longitude]);
-  } else {
-    currentMarker = L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map);
-  }
+  if(currentMarker){ currentMarker.setLatLng([latitude, longitude]); }
+  else { currentMarker = L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map); }
 }
 
 function startGps(){
@@ -154,26 +185,14 @@ function startGps(){
     setPerm("This phone/browser does not support GPS");
     return;
   }
-
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      updateLivePosition(pos);
-      if(!points.length) map.setView([pos.coords.latitude, pos.coords.longitude], 19);
-    },
-    err => {
-      setGps("Error", false);
-      setPerm("Allow location permission in Chrome and reload");
-      console.error(err);
-    },
+    pos => { updateLivePosition(pos); if(!points.length) map.setView([pos.coords.latitude, pos.coords.longitude], 19); },
+    err => { setGps("Error", false); setPerm("Allow location permission in Chrome and reload"); console.error(err); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
-
   navigator.geolocation.watchPosition(
     updateLivePosition,
-    err => {
-      setGps("Error", false);
-      console.error(err);
-    },
+    err => { setGps("Error", false); console.error(err); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
   );
 }
@@ -183,8 +202,11 @@ function capturePoint(){
     alert("GPS not ready yet. Allow location, wait a few seconds, then tap again.");
     return;
   }
+  const rid = prompt(`${repairType} ID`, nextRepairId(repairType)) || nextRepairId(repairType);
   points.push({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    repair_id: rid,
+    repair_type: repairType,
     lat: lastPos.lat,
     lng: lastPos.lng,
     accuracy: lastPos.accuracy,
@@ -197,9 +219,7 @@ function downloadFile(name, content, type){
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
+  a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
@@ -210,6 +230,8 @@ function buildGeoJSON(){
       type: "Feature",
       properties: {
         point_no: i + 1,
+        repair_id: p.repair_id || `Point ${i+1}`,
+        repair_type: p.repair_type || "Bead",
         accuracy_m: Math.round(p.accuracy || 0),
         timestamp: isoTime(p.timestamp),
         local_time: formatTime(p.timestamp)
@@ -221,45 +243,43 @@ function buildGeoJSON(){
 
 function buildCSV(){
   return [
-    "point_no,latitude,longitude,accuracy_m,timestamp_iso,local_time",
+    "point_no,repair_id,repair_type,latitude,longitude,accuracy_m,timestamp_iso,local_time",
     ...points.map((p, i) =>
-      [i + 1, p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(",")
+      [i + 1, p.repair_id || `Point ${i+1}`, p.repair_type || "Bead", p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(",")
     )
   ].join("\n");
 }
 
 function buildKML(){
-  const placemarks = points.map((p, i) => `\n    <Placemark>\n      <name>Point ${i + 1}</name>\n      <description>Accuracy ${Math.round(p.accuracy || 0)} m | ${escapeHtml(formatTime(p.timestamp))}</description>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Points</name>${placemarks}\n  </Document>\n</kml>`;
+  const placemarks = points.map((p, i) => `\n    <Placemark>\n      <name>${escapeHtml(p.repair_id || `Point ${i+1}`)}</name>\n      <description>Type ${escapeHtml(p.repair_type || "Bead")} | Accuracy ${Math.round(p.accuracy || 0)} m | ${escapeHtml(formatTime(p.timestamp))}</description>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Repair Points</name>${placemarks}\n  </Document>\n</kml>`;
 }
 
 function downloadCSV(){
   if(!points.length){ alert("No points captured yet."); return; }
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  downloadFile(`linersync-points-${stamp}.csv`, buildCSV(), "text/csv");
+  downloadFile(`linersync-repairs-${stamp}.csv`, buildCSV(), "text/csv");
 }
-
 function downloadGeoJSON(){
   if(!points.length){ alert("No points captured yet."); return; }
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  downloadFile(`linersync-points-${stamp}.geojson`, JSON.stringify(buildGeoJSON(), null, 2), "application/geo+json");
+  downloadFile(`linersync-repairs-${stamp}.geojson`, JSON.stringify(buildGeoJSON(), null, 2), "application/geo+json");
 }
-
 function downloadKML(){
   if(!points.length){ alert("No points captured yet."); return; }
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  downloadFile(`linersync-points-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml");
+  downloadFile(`linersync-repairs-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml");
 }
 
 function clearPoints(){
   if(!confirm("Delete all saved points on this phone?")) return;
   points = [];
   renderPoints();
-  if(currentMarker && lastPos){
-    map.setView([lastPos.lat, lastPos.lng], 19);
-  }
+  if(currentMarker && lastPos){ map.setView([lastPos.lat, lastPos.lng], 19); }
 }
 
+document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType = "Bead"; updateTypeUI(); });
+document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType = "Patch"; updateTypeUI(); });
 document.getElementById("captureBtn").addEventListener("click", capturePoint);
 document.getElementById("fitBtn").addEventListener("click", fitSavedPoints);
 document.getElementById("csvBtn").addEventListener("click", downloadCSV);
