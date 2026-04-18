@@ -1,132 +1,235 @@
-<!DOCTYPE html><html lang="en"><head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
-    <meta name="mobile-web-app-capable" content="yes"/>
-    <meta name="apple-mobile-web-app-capable" content="yes"/>
-    <meta name="theme-color" content="#020617"/>
-    <title>LinerSync SuperApp v2</title>
-    <style>
-    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%;overflow:hidden}
-    body{background:linear-gradient(145deg,#080c18 0%,#0c1526 40%,#111d35 100%);color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
-    input,select{width:100%;background:rgba(30,41,59,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(148,163,184,.15);border-radius:14px;padding:14px;color:#f8fafc;font-size:16px;font-weight:600;outline:none;-webkit-appearance:none;font-family:inherit;min-height:52px;transition:border-color .2s}
-    input:focus,select:focus{border-color:rgba(96,165,250,.6);box-shadow:0 0 20px rgba(59,130,246,.15)}
-    button{border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;min-height:48px}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(148,163,184,.2);border-radius:4px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    </style>
-    </head><body><div id="root"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script>
-    "use strict";
-    const h=React.createElement,{useState,useEffect,useMemo,useCallback,useRef}=React,F=React.Fragment;
-    
-    const SK="ls9";
-    function sLoad(){
-      let d=tp(SK);if(d)return d;
-      for(const k of["ls8","linersync-v7"]){d=tp(k);if(d){localStorage.setItem(SK,JSON.stringify(d));return d;}}
-      return null;
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>LinerSync Simple Points</title>
+  <meta name="theme-color" content="#0b1220" />
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#121c31; --text:#eaf1ff; --muted:#9fb2d8;
+      --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f;
     }
-    function sSave(d){try{localStorage.setItem(SK,JSON.stringify(d))}catch(e){}}
-    function tp(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}}
-    
-    const uid=()=>`${Date.now()}-${Math.random().toString(36).substr(2,9)}`;
-    const td=()=>new Date().toISOString().split("T")[0];
-    const nw=()=>{const d=new Date();return d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0')};
-    const fn=n=>n?n.toLocaleString():"0";
-    const EMPTY={panels:[],seams:[],airTests:[],trialWelds:[],dTests:[],vacuums:[],perimeter:[],captures:[],dronePhotos:[]};
-    
-    function calcDT(seams, dTests, interval) {
-      const totalFt = seams.reduce((a, s) => a + (Number(s.len) || 0), 0);
-      const dtCount = dTests.length;
-      const threshold = (dtCount + 1) * interval;
-      const remaining = threshold - totalFt;
-      const due = totalFt >= threshold;
-      const overdue = due ? totalFt - threshold : 0;
-      return { totalFt, dtCount, due, remaining, overdue };
-    }
-    
-    function useGPS(){
-      const[g,setG]=useState({lat:null,lng:null,acc:null,status:"init"});
-      const wr=useRef(null);
-      const start=useCallback(()=>{
-        if(!navigator.geolocation)return;
-        if(wr.current!==null)navigator.geolocation.clearWatch(wr.current);
-        wr.current=navigator.geolocation.watchPosition(
-          p=>setG({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,status:"locked"}),
-          e=>setG(p=>({...p,status:"error"})),{enableHighAccuracy:true,timeout:10000,maximumAge:0});
-      },[]);
-      useEffect(()=>{start();return()=>{if(wr.current!==null)navigator.geolocation.clearWatch(wr.current)}},[start]);
-      return{...g,stamp:()=>g.lat?{lat:g.lat,lng:g.lng,acc:g.acc}:null};
-    }
-    
-    function YellowGPSBar({gps}){
-      const isLocked = gps.status === "locked";
-      return h("div", {style: {background: isLocked ? "#facc15" : "#ef4444", color: "#000", padding: "6px 10px", fontSize: "11px", fontWeight: "900", textAlign: "center", display: "flex", justifyContent: "center", gap: "15px", borderBottom: "1.5px solid #000", zIndex: 100}},
-        h("span", null, isLocked ? "📍 GPS ACTIVE" : "🛰 SEARCHING GPS..."),
-        isLocked && h("span", null, "LAT: " + gps.lat.toFixed(6)),
-        isLocked && h("span", null, "LNG: " + gps.lng.toFixed(6))
-      );
-    }
-    
-    function App(){
-      const[store,setStore]=useState(()=>sLoad()||{projects:[],active:null});
-      const gps=useGPS();
-      const persist=n=>{setStore(n);sSave(n)};
-      if(!store.active) return h(Home,{store,persist});
-      const proj = store.projects.find(p=>p.id===store.active);
-      return h(ProjView,{proj,store,persist,gps});
-    }
-    
-    function Home({store,persist}){
-      const add=()=>{
-        const name=prompt("Project Name?");if(!name)return;
-        const np={id:uid(),name,area:"Site A",material:"60-mil HDPE",data:{...EMPTY},specs:{dtInterval:500}};
-        persist({projects:[...store.projects,np],active:np.id});
-      };
-      return h("div",{style:{padding:20,textAlign:"center"}},
-        h("h1",{style:{marginTop:40,fontSize:32, color:"#f8fafc"}},"LinerSync"),
-        store.projects.map(p=>h("button",{key:p.id,onClick:()=>persist({...store,active:p.id}),style:{background:"#1e293b",color:"#fff",width:"100%",padding:20,borderRadius:15,marginBottom:10,textAlign:"left", border:"1px solid #334155"}},p.name)),
-        h("button",{onClick:add,style:{background:"#3b82f6",color:"#fff",width:"100%",padding:20,borderRadius:15,marginTop:20,fontWeight:700}},"+ NEW PROJECT")
-      );
-    }
-    
-    function ProjView({proj,store,persist,gps}){
-      const[tab,setTab]=useState("tests");
-      const d = proj.data;
-      const up=nd=>persist({...store,projects:store.projects.map(p=>p.id===proj.id?{...p,data:nd}:p)});
-      const dtStats = useMemo(()=>calcDT(d.seams, d.dTests, proj.specs?.dtInterval || 500), [d.seams, d.dTests, proj.specs]);
-      return h("div",{style:{display:"flex",flexDirection:"column",height:"100vh"}},
-        h(YellowGPSBar,{gps}),
-        h("div",{style:{padding:10,background:"#020617",display:"flex",justifyContent:"space-between",alignItems:"center", borderBottom:"1px solid #1e293b"}},
-           h("button",{onClick:()=>persist({...store,active:null}),style:{color:"#60a5fa",background:"none", fontWeight:"700"}},"← PROJECTS"),
-           h("b",{style:{color:"#f8fafc"}},proj.name),
-           h("div",null)
-        ),
-        h("div",{style:{flex:1,overflowY:"auto",padding:15}},
-          h("div",{style:{background: dtStats.due ? "rgba(220,38,38,0.2)" : "rgba(74,222,128,0.1)", border:"1.5px solid " + (dtStats.due ? "#ef4444" : "#4ade80"), borderRadius:16, padding:15, marginBottom:20}},
-            h("div",{style:{display:"flex", justifyContent:"space-between", alignItems:"center"}},
-              h("div",null,
-                h("p",{style:{fontSize:10, fontWeight:800, color:"#94a3b8"}},"WELD FOOTAGE"),
-                h("p",{style:{fontSize:18, fontWeight:900, color:"#f8fafc"}},fn(dtStats.totalFt) + "' total")),
-              h("div",{style:{textAlign:"right"}},
-                dtStats.due ? h(F,null, h("p",{style:{color:"#ef4444", fontWeight:900}},"⚠ DT OVERDUE"), h("p",{style:{fontSize:10, color:"#ef4444"}},fn(dtStats.overdue)+"' past due")) 
-                : h(F,null, h("p",{style:{color:"#4ade80", fontWeight:900}},"NEXT DT IN"), h("p",{style:{fontSize:20, fontWeight:900, color:"#4ade80"}},fn(dtStats.remaining)+"'"))
-              )
-            )
-          ),
-          h("button",{onClick:()=>{
-            const num = prompt("Seam Number?"); if(!num) return;
-            const len = prompt("Length in feet?"); if(!len) return;
-            up({...d, seams:[...d.seams, {id:uid(), num, len:Number(len), date:td()}]});
-          }, style:{background:"#3b82f6", color:"#fff", width:"100%", padding:15, borderRadius:12, fontWeight:700, marginBottom:10}}, "+ LOG NEW WELD"),
-          h("button",{onClick:()=>{
-            const num = prompt("DT Number?"); if(!num) return;
-            up({...d, dTests:[...d.dTests, {id:uid(), dtNum:num, date:td()}]});
-          }, style:{background:"#1e293b", color:"#fff", width:"100%", padding:15, borderRadius:12, fontWeight:700, border:"1px solid #334155"}}, "+ LOG DT TEST")
-        )
-      );
-    }
-    ReactDOM.render(h(App),document.getElementById("root"));
-    </script></body></html>
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    .app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+    .top{padding:10px;background:linear-gradient(180deg,#0f1830,#0b1220);border-bottom:1px solid var(--line)}
+    .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 10px}
+    .status{font-size:15px;color:var(--muted);margin-bottom:8px}
+    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    button{border:0;border-radius:18px;padding:20px 12px;font-size:18px;font-weight:800;color:#07111f;cursor:pointer}
+    .capture{background:var(--green)}
+    .download{background:var(--blue)}
+    .clear{background:var(--red);color:white;padding:10px 14px;font-size:14px}
+    #map{height:100%;width:100%}
+    .bottom{padding:10px;background:linear-gradient(0deg,#0f1830,#0b1220);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700}
+    .actions{display:flex;gap:8px;align-items:center}
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="title">LinerSync Simple Points</div>
+    <div id="perm" class="status">Tap allow location permission</div>
+    <div class="buttons">
+      <button class="capture" id="captureBtn">Tap to Capture</button>
+      <button class="download" id="downloadBtn">Download Points</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="bottom">
+    <div class="pill" id="countPill">Points: 0</div>
+    <div class="actions">
+      <button class="clear" id="clearBtn">Clear</button>
+      <div class="pill" id="gpsPill">GPS: Waiting</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script>
+const STORAGE_KEY = "linersync-simple-points-v1";
+let points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let map, markersLayer, currentMarker = null, lastPos = null;
+
+function savePoints(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
+  document.getElementById("countPill").textContent = `Points: ${points.length}`;
+}
+
+function formatTime(ts){
+  return new Date(ts).toLocaleString([], {
+    year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function renderPoints(){
+  markersLayer.clearLayers();
+  points.forEach((p, i) => {
+    const marker = L.marker([p.lat, p.lng]).addTo(markersLayer);
+    marker.bindPopup(`
+      <b>Point ${i + 1}</b><br>
+      Lat: ${p.lat.toFixed(7)}<br>
+      Lng: ${p.lng.toFixed(7)}<br>
+      Accuracy: ${Math.round(p.accuracy || 0)} m<br>
+      Time: ${escapeHtml(formatTime(p.timestamp))}
+    `);
+  });
+  savePoints();
+}
+
+function setGps(text, ok=true){
+  const el = document.getElementById("gpsPill");
+  el.textContent = `GPS: ${text}`;
+  el.style.borderColor = ok ? "#29406f" : "#6b1f1f";
+}
+
+function setPerm(text){
+  document.getElementById("perm").textContent = text;
+}
+
+function initMap(){
+  map = L.map('map');
+  markersLayer = L.layerGroup().addTo(map);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 22,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  renderPoints();
+
+  if(points.length){
+    const group = L.featureGroup(points.map(p => L.marker([p.lat, p.lng])));
+    map.fitBounds(group.getBounds().pad(0.2));
+  } else {
+    map.setView([33.3943, -104.5230], 5);
+  }
+}
+
+function updateLivePosition(position){
+  const { latitude, longitude, accuracy } = position.coords;
+  lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
+  setGps(`${Math.round(accuracy)}m`, true);
+  setPerm("Location permission allowed");
+
+  if(currentMarker){
+    currentMarker.setLatLng([latitude, longitude]);
+  } else {
+    currentMarker = L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map);
+  }
+}
+
+function startGps(){
+  if(!("geolocation" in navigator)){
+    setGps("Not supported", false);
+    setPerm("This phone/browser does not support GPS");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      updateLivePosition(pos);
+      map.setView([pos.coords.latitude, pos.coords.longitude], 19);
+    },
+    err => {
+      setGps("Error", false);
+      setPerm("Allow location permission in Chrome and reload");
+      console.error(err);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+
+  navigator.geolocation.watchPosition(
+    updateLivePosition,
+    err => {
+      setGps("Error", false);
+      console.error(err);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
+  );
+}
+
+function capturePoint(){
+  if(!lastPos){
+    alert("GPS not ready yet. Allow location, wait a few seconds, then tap again.");
+    return;
+  }
+  points.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    lat: lastPos.lat,
+    lng: lastPos.lng,
+    accuracy: lastPos.accuracy,
+    timestamp: Date.now()
+  });
+  renderPoints();
+}
+
+function downloadFile(name, content, type){
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadPoints(){
+  if(!points.length){
+    alert("No points captured yet.");
+    return;
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const geojson = {
+    type: "FeatureCollection",
+    features: points.map((p, i) => ({
+      type: "Feature",
+      properties: {
+        point_no: i + 1,
+        accuracy_m: Math.round(p.accuracy || 0),
+        timestamp: new Date(p.timestamp).toISOString(),
+        local_time: formatTime(p.timestamp)
+      },
+      geometry: { type: "Point", coordinates: [p.lng, p.lat] }
+    }))
+  };
+
+  const csvRows = [
+    "point_no,latitude,longitude,accuracy_m,timestamp_iso,local_time",
+    ...points.map((p, i) =>
+      [i + 1, p.lat, p.lng, Math.round(p.accuracy || 0), new Date(p.timestamp).toISOString(), `\"${formatTime(p.timestamp)}\"`].join(",")
+    )
+  ];
+
+  downloadFile(`linersync-points-${stamp}.geojson`, JSON.stringify(geojson, null, 2), "application/geo+json");
+  setTimeout(() => {
+    downloadFile(`linersync-points-${stamp}.csv`, csvRows.join("\n"), "text/csv");
+  }, 250);
+}
+
+function clearPoints(){
+  if(!confirm("Delete all saved points on this phone?")) return;
+  points = [];
+  renderPoints();
+}
+
+document.getElementById("captureBtn").addEventListener("click", capturePoint);
+document.getElementById("downloadBtn").addEventListener("click", downloadPoints);
+document.getElementById("clearBtn").addEventListener("click", clearPoints);
+
+initMap();
+startGps();
+</script>
+</body>
+</html>
