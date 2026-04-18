@@ -88,8 +88,33 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-repair-points-v5";
-let points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const STORAGE_KEY = "linersync-repair-points-v6";
+const LEGACY_KEYS = [
+  "linersync-repair-points-v6",
+  "linersync-repair-points-v5",
+  "linersync-repair-points-v4",
+  "linersync-repair-points-v3",
+  "linersync-simple-points-v2",
+  "linersync-simple-points-v1",
+  "linersync-simple-points-local-v2"
+];
+
+function loadPoints(){
+  for(const key of LEGACY_KEYS){
+    try{
+      const raw = localStorage.getItem(key);
+      if(!raw) continue;
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length >= 0){
+        if(key !== STORAGE_KEY) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
+    }catch(e){}
+  }
+  return [];
+}
+
+let points = loadPoints();
 let map, markersLayer, currentMarker = null, lastPos = null;
 let repairType = "Bead";
 let taskActive = false;
@@ -99,60 +124,57 @@ function savePoints(){
   document.getElementById("countPill").textContent = `Points: ${points.length}`;
 }
 
-function setBackupStatus(text){
-  document.getElementById("backupPill").textContent = `Backup: ${text}`;
-}
-
+function setBackupStatus(text){ document.getElementById("backupPill").textContent = `Backup: ${text}`; }
 function updateTaskUI(){
   document.getElementById("taskPill").textContent = `Task: ${taskActive ? "On" : "Off"}`;
   document.getElementById("typebar").classList.toggle("hidden", !taskActive);
   document.getElementById("captureRow").classList.toggle("hidden", !taskActive);
   document.getElementById("startTaskBtn").textContent = taskActive ? "Task Started" : "Start Task";
 }
-
 function updateTypeUI(){
   document.getElementById("typePill").textContent = `Type: ${repairType}`;
   document.getElementById("beadBtn").classList.toggle("active", repairType === "Bead");
   document.getElementById("patchBtn").classList.toggle("active", repairType === "Patch");
 }
-
-function formatTime(ts){
-  return new Date(ts).toLocaleString([], {year:"numeric", month:"2-digit", day:"2-digit", hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true});
-}
+function formatTime(ts){ return new Date(ts).toLocaleString([], {year:"numeric", month:"2-digit", day:"2-digit", hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}); }
 function isoTime(ts){ return new Date(ts).toISOString(); }
-function escapeHtml(s){ return String(s).replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function xmlEscape(s){ return String(s).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c])); }
 function typeIndex(t){ return points.filter(p => (p.repair_type || "Bead") === t).length; }
 function nextRepairId(t){ return `${t === "Bead" ? "B" : "P"}-${String(typeIndex(t) + 1).padStart(3,"0")}`; }
+function fitSavedPoints(){ if(!points.length) return; const group = L.featureGroup(points.map(p => L.marker([p.lat, p.lng]))); map.fitBounds(group.getBounds().pad(0.2)); }
+function markerColor(type){ return type === "Patch" ? "#c084fc" : "#facc15"; }
 
-function fitSavedPoints(){
-  if(!points.length) return;
-  const group = L.featureGroup(points.map(p => L.marker([p.lat, p.lng])));
-  map.fitBounds(group.getBounds().pad(0.2));
+function normalizePoint(p, i){
+  return {
+    id: p.id || String(Date.now()+i),
+    repair_id: p.repair_id || p.id_label || `P-${String(i+1).padStart(3,"0")}`,
+    repair_type: p.repair_type || "Bead",
+    lat: Number(p.lat),
+    lng: Number(p.lng),
+    accuracy: Number(p.accuracy || 0),
+    timestamp: p.timestamp || Date.now()
+  };
 }
 
-function markerColor(type){ return type === "Patch" ? "#c084fc" : "#facc15"; }
+points = points.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
 function renderPoints(){
   markersLayer.clearLayers();
   points.forEach((p, i) => {
     const marker = L.circleMarker([p.lat, p.lng], {radius: 7, color: "#0b1220", weight: 1, fillColor: markerColor(p.repair_type || "Bead"), fillOpacity: 0.95}).addTo(markersLayer);
     marker.bindPopup(`
-      <b>${escapeHtml(p.repair_id || `Point ${i+1}`)}</b><br>
-      Type: ${escapeHtml(p.repair_type || "Bead")}<br>
+      <b>${xmlEscape(p.repair_id || `Point ${i+1}`)}</b><br>
+      Type: ${xmlEscape(p.repair_type || "Bead")}<br>
       Lat: ${p.lat.toFixed(7)}<br>
       Lng: ${p.lng.toFixed(7)}<br>
       Accuracy: ${Math.round(p.accuracy || 0)} m<br>
-      Time: ${escapeHtml(formatTime(p.timestamp))}
+      Time: ${xmlEscape(formatTime(p.timestamp))}
     `);
   });
   savePoints();
 }
 
-function setGps(text, ok=true){
-  const el = document.getElementById("gpsPill");
-  el.textContent = `GPS: ${text}`;
-  el.style.borderColor = ok ? "#29406f" : "#6b1f1f";
-}
+function setGps(text, ok=true){ const el = document.getElementById("gpsPill"); el.textContent = `GPS: ${text}`; el.style.borderColor = ok ? "#29406f" : "#6b1f1f"; }
 function setPerm(text){ document.getElementById("perm").textContent = text; }
 
 function initMap(){
@@ -163,95 +185,42 @@ function initMap(){
   updateTaskUI();
   updateTypeUI();
   setBackupStatus("Local only");
-  if(points.length){ fitSavedPoints(); } else { map.setView([33.3943, -104.5230], 5); }
+  if(points.length){ setPerm(`Recovered ${points.length} saved points.`); fitSavedPoints(); } else { map.setView([33.3943, -104.5230], 5); }
 }
 
 function updateLivePosition(position){
   const { latitude, longitude, accuracy } = position.coords;
   lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
   setGps(`${Math.round(accuracy)}m`, true);
-  if(taskActive) setPerm(`Task running: ${repairType}`); else setPerm("Tap Start Task to begin repair logging");
+  if(taskActive) setPerm(`Task running: ${repairType}`);
   if(currentMarker){ currentMarker.setLatLng([latitude, longitude]); }
   else { currentMarker = L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map); }
 }
 
 function startGps(){
-  if(!("geolocation" in navigator)){
-    setGps("Not supported", false);
-    setPerm("This phone/browser does not support GPS");
-    return;
-  }
+  if(!("geolocation" in navigator)){ setGps("Not supported", false); setPerm("This phone/browser does not support GPS"); return; }
   navigator.geolocation.getCurrentPosition(
     pos => { updateLivePosition(pos); if(!points.length) map.setView([pos.coords.latitude, pos.coords.longitude], 19); },
     err => { setGps("Error", false); setPerm("Allow location permission in Chrome and reload"); console.error(err); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
-  navigator.geolocation.watchPosition(
-    updateLivePosition,
-    err => { setGps("Error", false); console.error(err); },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
-  );
+  navigator.geolocation.watchPosition(updateLivePosition, err => { setGps("Error", false); console.error(err); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 });
 }
 
-function startTask(){
-  taskActive = true;
-  updateTaskUI();
-  updateTypeUI();
-  setPerm(`Task running: ${repairType}`);
-  if(lastPos) map.setView([lastPos.lat, lastPos.lng], 19);
-}
-
-function endTask(){
-  taskActive = false;
-  updateTaskUI();
-  setPerm("Task ended. Export file or tap Start Task again.");
-}
+function startTask(){ taskActive = true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType}`); if(lastPos) map.setView([lastPos.lat, lastPos.lng], 19); }
+function endTask(){ taskActive = false; updateTaskUI(); setPerm("Task ended. Export file or tap Start Task again."); }
 
 function capturePoint(){
-  if(!taskActive){
-    alert("Tap Start Task first.");
-    return;
-  }
-  if(!lastPos){
-    alert("GPS not ready yet. Allow location, wait a few seconds, then tap again.");
-    return;
-  }
+  if(!taskActive){ alert("Tap Start Task first."); return; }
+  if(!lastPos){ alert("GPS not ready yet. Allow location, wait a few seconds, then tap again."); return; }
   const rid = prompt(`${repairType} ID`, nextRepairId(repairType)) || nextRepairId(repairType);
-  points.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    repair_id: rid,
-    repair_type: repairType,
-    lat: lastPos.lat,
-    lng: lastPos.lng,
-    accuracy: lastPos.accuracy,
-    timestamp: Date.now()
-  });
+  points.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), repair_id: rid, repair_type: repairType, lat: lastPos.lat, lng: lastPos.lng, accuracy: lastPos.accuracy, timestamp: Date.now() });
   renderPoints();
 }
 
-function buildBackup(){
-  return {
-    app: "LinerSync Repair Points",
-    version: 5,
-    exported_at: new Date().toISOString(),
-    points
-  };
-}
-
-function downloadFile(name, content, type){
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function backupNow(){
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json");
-  setBackupStatus("JSON saved");
-  setPerm("Backup file downloaded.");
-}
+function buildBackup(){ return { app: "LinerSync Repair Points", version: 6, exported_at: new Date().toISOString(), points }; }
+function downloadFile(name, content, type){ const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+function backupNow(){ const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json"); setBackupStatus("JSON saved"); setPerm("Backup file downloaded to your phone. Use Restore Backup to pick it later."); }
 
 function restoreFromFile(file){
   const reader = new FileReader();
@@ -260,7 +229,7 @@ function restoreFromFile(file){
       const data = JSON.parse(reader.result);
       const restored = Array.isArray(data) ? data : Array.isArray(data.points) ? data.points : null;
       if(!restored) throw new Error("Invalid backup format");
-      points = restored;
+      points = restored.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       renderPoints();
       fitSavedPoints();
       setBackupStatus("Restored");
@@ -276,27 +245,15 @@ function restoreFromFile(file){
 function buildGeoJSON(){
   return { type: "FeatureCollection", features: points.map((p, i) => ({ type: "Feature", properties: { point_no: i + 1, repair_id: p.repair_id || `Point ${i+1}`, repair_type: p.repair_type || "Bead", accuracy_m: Math.round(p.accuracy || 0), timestamp: isoTime(p.timestamp), local_time: formatTime(p.timestamp) }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } })) };
 }
-
-function buildCSV(){
-  return ["point_no,repair_id,repair_type,latitude,longitude,accuracy_m,timestamp_iso,local_time", ...points.map((p, i) => [i + 1, p.repair_id || `Point ${i+1}`, p.repair_type || "Bead", p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(","))].join("\n");
-}
-
+function buildCSV(){ return ["point_no,repair_id,repair_type,latitude,longitude,accuracy_m,timestamp_iso,local_time", ...points.map((p, i) => [i + 1, p.repair_id || `Point ${i+1}`, p.repair_type || "Bead", p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(","))].join("\n"); }
 function buildKML(){
-  const placemarks = points.map((p, i) => `\n    <Placemark>\n      <name>${escapeHtml(p.repair_id || `Point ${i+1}`)}</name>\n      <description>Type ${escapeHtml(p.repair_type || "Bead")} | Accuracy ${Math.round(p.accuracy || 0)} m | ${escapeHtml(formatTime(p.timestamp))}</description>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Repair Points</name>${placemarks}\n  </Document>\n</kml>`;
+  const placemarks = points.map((p, i) => `\n    <Placemark>\n      <name>${xmlEscape(p.repair_id || `Point ${i+1}`)}</name>\n      <description>${xmlEscape(`Type ${p.repair_type || "Bead"} | Accuracy ${Math.round(p.accuracy || 0)} m | ${formatTime(p.timestamp)}`)}</description>\n      <styleUrl>#${p.repair_type === "Patch" ? "patchStyle" : "beadStyle"}</styleUrl>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Repair Points</name>\n    <Style id="beadStyle"><IconStyle><color>ff00ffff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="patchStyle"><IconStyle><color>ffff00ff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>${placemarks}\n  </Document>\n</kml>`;
 }
-
 function downloadCSV(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.csv`, buildCSV(), "text/csv"); }
 function downloadGeoJSON(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.geojson`, JSON.stringify(buildGeoJSON(), null, 2), "application/geo+json"); }
-function downloadKML(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml"); }
-
-function clearPoints(){
-  if(!confirm("Delete all saved points on this phone?")) return;
-  points = [];
-  renderPoints();
-  setBackupStatus("Local only");
-  if(currentMarker && lastPos){ map.setView([lastPos.lat, lastPos.lng], 19); }
-}
+function downloadKML(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml"); setPerm("KML downloaded. In Google Earth, import the KML file from your device."); }
+function clearPoints(){ if(!confirm("Delete all saved points on this phone?")) return; points = []; renderPoints(); setBackupStatus("Local only"); if(currentMarker && lastPos){ map.setView([lastPos.lat, lastPos.lng], 19); } }
 
 document.getElementById("startTaskBtn").addEventListener("click", startTask);
 document.getElementById("endTaskBtn").addEventListener("click", endTask);
