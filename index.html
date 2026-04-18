@@ -63,7 +63,7 @@
     </div>
     <div class="captureRow hidden" id="captureRow">
       <button class="capture" id="captureBtn">Capture Repair</button>
-      <button class="download" id="fitBtn">Fit Saved Points</button>
+      <button class="download" id="fitBtn">Fit Field Map</button>
     </div>
     <div class="exports" id="exports">
       <button class="export csv" id="csvBtn">CSV</button>
@@ -88,8 +88,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-repair-points-v6";
+const STORAGE_KEY = "linersync-repair-points-v7";
 const LEGACY_KEYS = [
+  "linersync-repair-points-v7",
   "linersync-repair-points-v6",
   "linersync-repair-points-v5",
   "linersync-repair-points-v4",
@@ -105,7 +106,7 @@ function loadPoints(){
       const raw = localStorage.getItem(key);
       if(!raw) continue;
       const parsed = JSON.parse(raw);
-      if(Array.isArray(parsed) && parsed.length >= 0){
+      if(Array.isArray(parsed)){
         if(key !== STORAGE_KEY) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
         return parsed;
       }
@@ -115,7 +116,7 @@ function loadPoints(){
 }
 
 let points = loadPoints();
-let map, markersLayer, currentMarker = null, lastPos = null;
+let map, markersLayer, trailLayer, currentMarker = null, accuracyCircle = null, lastPos = null;
 let repairType = "Bead";
 let taskActive = false;
 
@@ -123,7 +124,6 @@ function savePoints(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
   document.getElementById("countPill").textContent = `Points: ${points.length}`;
 }
-
 function setBackupStatus(text){ document.getElementById("backupPill").textContent = `Backup: ${text}`; }
 function updateTaskUI(){
   document.getElementById("taskPill").textContent = `Task: ${taskActive ? "On" : "Off"}`;
@@ -141,7 +141,6 @@ function isoTime(ts){ return new Date(ts).toISOString(); }
 function xmlEscape(s){ return String(s).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c])); }
 function typeIndex(t){ return points.filter(p => (p.repair_type || "Bead") === t).length; }
 function nextRepairId(t){ return `${t === "Bead" ? "B" : "P"}-${String(typeIndex(t) + 1).padStart(3,"0")}`; }
-function fitSavedPoints(){ if(!points.length) return; const group = L.featureGroup(points.map(p => L.marker([p.lat, p.lng]))); map.fitBounds(group.getBounds().pad(0.2)); }
 function markerColor(type){ return type === "Patch" ? "#c084fc" : "#facc15"; }
 
 function normalizePoint(p, i){
@@ -155,11 +154,34 @@ function normalizePoint(p, i){
     timestamp: p.timestamp || Date.now()
   };
 }
-
 points = points.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+function getAllVisibleLatLngs(){
+  const latlngs = points.map(p => [p.lat, p.lng]);
+  if(lastPos && Number.isFinite(lastPos.lat) && Number.isFinite(lastPos.lng)) latlngs.push([lastPos.lat, lastPos.lng]);
+  return latlngs;
+}
+
+function fitFieldMap(){
+  const latlngs = getAllVisibleLatLngs();
+  if(!latlngs.length) return;
+  if(latlngs.length === 1){
+    map.setView(latlngs[0], 19);
+    return;
+  }
+  map.fitBounds(L.latLngBounds(latlngs), {padding:[35,35]});
+}
+
+function redrawTrail(){
+  trailLayer.clearLayers();
+  if(points.length >= 2){
+    L.polyline(points.map(p => [p.lat, p.lng]), {color:'#38bdf8', weight:3, opacity:0.85}).addTo(trailLayer);
+  }
+}
 
 function renderPoints(){
   markersLayer.clearLayers();
+  redrawTrail();
   points.forEach((p, i) => {
     const marker = L.circleMarker([p.lat, p.lng], {radius: 7, color: "#0b1220", weight: 1, fillColor: markerColor(p.repair_type || "Bead"), fillOpacity: 0.95}).addTo(markersLayer);
     marker.bindPopup(`
@@ -179,22 +201,38 @@ function setPerm(text){ document.getElementById("perm").textContent = text; }
 
 function initMap(){
   map = L.map('map');
+  trailLayer = L.layerGroup().addTo(map);
   markersLayer = L.layerGroup().addTo(map);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 22, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
   renderPoints();
   updateTaskUI();
   updateTypeUI();
   setBackupStatus("Local only");
-  if(points.length){ setPerm(`Recovered ${points.length} saved points.`); fitSavedPoints(); } else { map.setView([33.3943, -104.5230], 5); }
+  if(points.length){ setPerm(`Recovered ${points.length} saved points.`); fitFieldMap(); } else { map.setView([33.3943, -104.5230], 5); }
+}
+
+function drawCurrentPosition(){
+  if(!lastPos) return;
+  const latlng = [lastPos.lat, lastPos.lng];
+  if(currentMarker){ currentMarker.setLatLng(latlng); }
+  else {
+    currentMarker = L.circleMarker(latlng, {radius: 9, color:'#ffffff', weight:2, fillColor:'#38bdf8', fillOpacity:1}).addTo(map);
+    currentMarker.bindPopup('Current GPS location');
+  }
+  if(accuracyCircle){ accuracyCircle.setLatLng(latlng); accuracyCircle.setRadius(Math.max(1, lastPos.accuracy || 1)); }
+  else {
+    accuracyCircle = L.circle(latlng, {radius: Math.max(1, lastPos.accuracy || 1), color:'#38bdf8', weight:1, fillColor:'#38bdf8', fillOpacity:0.12}).addTo(map);
+  }
 }
 
 function updateLivePosition(position){
   const { latitude, longitude, accuracy } = position.coords;
   lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
   setGps(`${Math.round(accuracy)}m`, true);
-  if(taskActive) setPerm(`Task running: ${repairType}`);
-  if(currentMarker){ currentMarker.setLatLng([latitude, longitude]); }
-  else { currentMarker = L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map); }
+  if(taskActive) setPerm(`Task running: ${repairType} | Current + captures visible on map`);
+  else setPerm("Field map shows current GPS and saved captures");
+  drawCurrentPosition();
+  if(taskActive || points.length) fitFieldMap();
 }
 
 function startGps(){
@@ -207,8 +245,8 @@ function startGps(){
   navigator.geolocation.watchPosition(updateLivePosition, err => { setGps("Error", false); console.error(err); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 });
 }
 
-function startTask(){ taskActive = true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType}`); if(lastPos) map.setView([lastPos.lat, lastPos.lng], 19); }
-function endTask(){ taskActive = false; updateTaskUI(); setPerm("Task ended. Export file or tap Start Task again."); }
+function startTask(){ taskActive = true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType} | Current + captures visible on map`); fitFieldMap(); }
+function endTask(){ taskActive = false; updateTaskUI(); setPerm("Task ended. Field map still shows current GPS and saved captures."); fitFieldMap(); }
 
 function capturePoint(){
   if(!taskActive){ alert("Tap Start Task first."); return; }
@@ -216,9 +254,10 @@ function capturePoint(){
   const rid = prompt(`${repairType} ID`, nextRepairId(repairType)) || nextRepairId(repairType);
   points.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), repair_id: rid, repair_type: repairType, lat: lastPos.lat, lng: lastPos.lng, accuracy: lastPos.accuracy, timestamp: Date.now() });
   renderPoints();
+  fitFieldMap();
 }
 
-function buildBackup(){ return { app: "LinerSync Repair Points", version: 6, exported_at: new Date().toISOString(), points }; }
+function buildBackup(){ return { app: "LinerSync Repair Points", version: 7, exported_at: new Date().toISOString(), points }; }
 function downloadFile(name, content, type){ const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 function backupNow(){ const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json"); setBackupStatus("JSON saved"); setPerm("Backup file downloaded to your phone. Use Restore Backup to pick it later."); }
 
@@ -231,7 +270,7 @@ function restoreFromFile(file){
       if(!restored) throw new Error("Invalid backup format");
       points = restored.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
       renderPoints();
-      fitSavedPoints();
+      fitFieldMap();
       setBackupStatus("Restored");
       setPerm(`Restored ${points.length} points from backup.`);
     } catch (err) {
@@ -253,17 +292,17 @@ function buildKML(){
 function downloadCSV(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.csv`, buildCSV(), "text/csv"); }
 function downloadGeoJSON(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.geojson`, JSON.stringify(buildGeoJSON(), null, 2), "application/geo+json"); }
 function downloadKML(){ if(!points.length){ alert("No points captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-repairs-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml"); setPerm("KML downloaded. In Google Earth, import the KML file from your device."); }
-function clearPoints(){ if(!confirm("Delete all saved points on this phone?")) return; points = []; renderPoints(); setBackupStatus("Local only"); if(currentMarker && lastPos){ map.setView([lastPos.lat, lastPos.lng], 19); } }
+function clearPoints(){ if(!confirm("Delete all saved points on this phone?")) return; points = []; renderPoints(); setBackupStatus("Local only"); fitFieldMap(); }
 
 document.getElementById("startTaskBtn").addEventListener("click", startTask);
 document.getElementById("endTaskBtn").addEventListener("click", endTask);
 document.getElementById("backupBtn").addEventListener("click", backupNow);
 document.getElementById("restoreBtn").addEventListener("click", ()=>document.getElementById("restoreInput").click());
 document.getElementById("restoreInput").addEventListener("change", (e)=>{ if(e.target.files && e.target.files[0]) restoreFromFile(e.target.files[0]); e.target.value = ""; });
-document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType = "Bead"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType}`); });
-document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType = "Patch"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType}`); });
+document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType = "Bead"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType} | Current + captures visible on map`); });
+document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType = "Patch"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType} | Current + captures visible on map`); });
 document.getElementById("captureBtn").addEventListener("click", capturePoint);
-document.getElementById("fitBtn").addEventListener("click", fitSavedPoints);
+document.getElementById("fitBtn").addEventListener("click", fitFieldMap);
 document.getElementById("csvBtn").addEventListener("click", downloadCSV);
 document.getElementById("geojsonBtn").addEventListener("click", downloadGeoJSON);
 document.getElementById("kmlBtn").addEventListener("click", downloadKML);
