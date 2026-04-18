@@ -3,374 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>LinerSync Repair Points</title>
+  <title>LinerSync Field App</title>
   <meta name="theme-color" content="#0b1220" />
   <style>
     :root{
       --bg:#0b1220; --panel:#121c31; --text:#eaf1ff; --muted:#9fb2d8;
       --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15; --purple:#c084fc; --teal:#2dd4bf; --orange:#fb923c;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
-    .app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
-    .top{padding:10px;background:linear-gradient(180deg,#0f1830,#0b1220);border-bottom:1px solid var(--line)}
-    .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 6px}
-    .status{font-size:15px;color:var(--muted);margin-bottom:8px;text-align:center}
-    .taskbar,.backupbar,.repairbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-    .perimeterbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-    .startTask{background:var(--green)}
-    .endTask{background:var(--blue)}
-    .backupNow{background:var(--teal)}
-    .restoreBtn{background:var(--gold)}
-    .lockPerimeter{background:var(--orange)}
-    .clearPerimeter{background:#64748b;color:#fff}
-    .undoRepair{background:#f87171;color:#07111f}
-    .clearRepairs{background:var(--red);color:#fff}
-    .typebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-    .typebtn{border:1px solid var(--line);border-radius:16px;padding:14px 10px;font-size:16px;font-weight:800;color:var(--text);background:#16233e;cursor:pointer}
-    .typebtn.active{outline:3px solid rgba(250,204,21,.35);background:#22345b}
-    .captureRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
-    button{border:0;border-radius:18px;padding:18px 12px;font-size:18px;font-weight:800;color:#07111f;cursor:pointer}
-    .capture{background:var(--green)}
-    .download{background:var(--blue)}
-    .exports{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-    .export{padding:12px 8px;font-size:14px}
-    .csv{background:var(--blue)}
-    .geojson{background:var(--gold)}
-    .kml{background:var(--purple)}
-    #map{height:100%;width:100%}
-    .bottom{padding:10px;background:linear-gradient(0deg,#0f1830,#0b1220);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
-    .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700}
-    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+    .app{display:grid;grid-template-rows:1fr auto;height:100dvh}
+    .mapWrap{position:relative;min-height:0}
+    #map{position:absolute;inset:0;height:100%;width:100%}
+    .overlayTop{position:absolute;top:10px;left:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .overlayTop > *{pointer-events:auto}
+    .titleBar,.statusBar,.toolbar,.chipRow,.panel{background:rgba(15,24,48,.92);border:1px solid var(--line);backdrop-filter:blur(8px);border-radius:18px}
+    .titleBar{padding:10px 14px;font-size:24px;font-weight:900;text-align:center}
+    .statusBar{padding:10px 14px;font-size:14px;color:var(--muted);text-align:center}
+    .chipRow{display:flex;gap:8px;overflow-x:auto;padding:8px;scrollbar-width:none}
+    .chipRow::-webkit-scrollbar{display:none}
+    .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700;white-space:nowrap;flex:0 0 auto}
+    .toolbar{padding:8px}
+    .tabRow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+    .tabRow::-webkit-scrollbar{display:none}
+    .tabBtn{flex:0 0 auto;border:1px solid var(--line);border-radius:16px;background:#16233e;color:var(--text);padding:14px 18px;font-size:16px;font-weight:900;min-height:56px;min-width:110px}
+    .tabBtn.active{background:#22345b;outline:3px solid rgba(250,204,21,.35)}
+    .buttonGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    button{border:0;border-radius:18px;padding:18px 14px;font-size:18px;font-weight:900;color:#07111f;cursor:pointer;min-height:64px}
+    .startTask{background:var(--green)} .endTask{background:var(--blue)} .capture{background:var(--green)} .fit{background:var(--blue)}
+    .lockPerimeter{background:var(--orange)} .clearPerimeter{background:#64748b;color:#fff}
+    .undoRepair{background:#f87171} .clearRepairs{background:var(--red);color:#fff}
+    .backupNow{background:var(--teal)} .restoreBtn{background:var(--gold)}
+    .csv{background:var(--blue)} .geojson{background:var(--gold)} .kml{background:var(--purple)}
+    .panel{position:absolute;left:10px;right:10px;bottom:10px;z-index:1000;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:44dvh}
     .hidden{display:none !important}
     input[type=file]{display:none}
     .gpsmeter{display:flex;align-items:flex-end;gap:3px;height:18px}
     .gpsbar{width:6px;border-radius:2px;background:#334155;opacity:.35}
     .gpsbar.b1{height:5px}.gpsbar.b2{height:8px}.gpsbar.b3{height:11px}.gpsbar.b4{height:14px}.gpsbar.b5{height:17px}
-    .gpsbar.on{background:#22c55e;opacity:1}
-    .gpsbar.warn{background:#facc15;opacity:1}
-    .gpsbar.bad{background:#ef4444;opacity:1}
+    .gpsbar.on{background:#22c55e;opacity:1}.gpsbar.warn{background:#facc15;opacity:1}.gpsbar.bad{background:#ef4444;opacity:1}
+    .leaflet-control-zoom a{width:52px !important;height:52px !important;line-height:52px !important;font-size:30px !important}
+    .leaflet-bottom.leaflet-right{bottom:170px}
+    .leaflet-top.leaflet-left{top:170px}
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
 </head>
 <body>
 <div class="app">
-  <div class="top">
-    <div class="title">LinerSync Repair Points</div>
-    <div id="perm" class="status">Tap Start Task to begin repair logging</div>
-    <div class="taskbar">
-      <button class="startTask" id="startTaskBtn">Start Task</button>
-      <button class="endTask" id="endTaskBtn">End Task</button>
+  <div class="mapWrap">
+    <div id="map"></div>
+    <div class="overlayTop">
+      <div class="titleBar">LinerSync Field App</div>
+      <div id="perm" class="statusBar">Map always on screen. Tap Start Task to begin.</div>
+      <div class="chipRow">
+        <div class="pill" id="countPill">Points: 0</div>
+        <div class="pill" id="perimeterPill">Perimeter: 0</div>
+        <div class="pill" id="taskPill">Task: Off</div>
+        <div class="pill" id="typePill">Type: Bead</div>
+        <div class="pill" id="backupPill">Backup: Local only</div>
+        <div class="pill" id="gpsPill">GPS: Waiting</div>
+        <div class="pill" id="gpsLockPill">Capture Lock: No</div>
+        <div class="pill" id="gpsSignalPill"><span id="gpsSignalText">Signal</span> <span class="gpsmeter" id="gpsMeter"><span class="gpsbar b1"></span><span class="gpsbar b2"></span><span class="gpsbar b3"></span><span class="gpsbar b4"></span><span class="gpsbar b5"></span></span></div>
+      </div>
     </div>
-    <div class="perimeterbar">
-      <button class="lockPerimeter" id="lockPerimeterBtn">Hard Lock Perimeter</button>
-      <button class="clearPerimeter" id="clearPerimeterBtn">Clear Perimeter</button>
-    </div>
-    <div class="repairbar">
-      <button class="undoRepair" id="clearLastRepairBtn">Clear Last Repair</button>
-      <button class="clearRepairs" id="clearBtn">Clear Repairs</button>
-    </div>
-    <div class="backupbar">
-      <button class="backupNow" id="backupBtn">Backup Now</button>
-      <button class="restoreBtn" id="restoreBtn">Restore Backup</button>
-      <input type="file" id="restoreInput" accept=".json,application/json">
-    </div>
-    <div class="typebar hidden" id="typebar">
-      <button class="typebtn active" id="beadBtn">Bead</button>
-      <button class="typebtn" id="patchBtn">Patch</button>
-    </div>
-    <div class="captureRow hidden" id="captureRow">
-      <button class="capture" id="captureBtn">Capture Repair</button>
-      <button class="download" id="fitBtn">Fit Field Map</button>
-    </div>
-    <div class="exports" id="exports">
-      <button class="export csv" id="csvBtn">CSV</button>
-      <button class="export geojson" id="geojsonBtn">GeoJSON</button>
-      <button class="export kml" id="kmlBtn">KML</button>
-    </div>
-  </div>
-
-  <div id="map"></div>
-
-  <div class="bottom">
-    <div class="pill" id="countPill">Points: 0</div>
-    <div class="actions">
-      <div class="pill" id="perimeterPill">Perimeter: 0</div>
-      <div class="pill" id="taskPill">Task: Off</div>
-      <div class="pill" id="typePill">Type: Bead</div>
-      <div class="pill" id="backupPill">Backup: Local only</div>
-      <div class="pill" id="gpsPill">GPS: Waiting</div>
-      <div class="pill" id="gpsLockPill">Capture Lock: No</div>
-      <div class="pill" id="gpsSignalPill"><span id="gpsSignalText">Signal</span> <span class="gpsmeter" id="gpsMeter"><span class="gpsbar b1"></span><span class="gpsbar b2"></span><span class="gpsbar b3"></span><span class="gpsbar b4"></span><span class="gpsbar b5"></span></span></div>
+    <div class="panel">
+      <div class="toolbar">
+        <div class="tabRow" id="tabRow">
+          <button class="tabBtn active" data-tab="task">Task</button>
+          <button class="tabBtn" data-tab="repair">Repair</button>
+          <button class="tabBtn" data-tab="perimeter">Perimeter</button>
+          <button class="tabBtn" data-tab="backup">Backup</button>
+          <button class="tabBtn" data-tab="export">Export</button>
+        </div>
+        <div class="buttonGrid" id="taskTab">
+          <button class="startTask" id="startTaskBtn">Start Task</button>
+          <button class="endTask" id="endTaskBtn">End Task</button>
+        </div>
+        <div class="buttonGrid hidden" id="repairTypeTab">
+          <button class="tabBtn active" id="beadBtn">Bead</button>
+          <button class="tabBtn" id="patchBtn">Patch</button>
+        </div>
+        <div class="buttonGrid hidden" id="repairTab">
+          <button class="capture" id="captureBtn">Capture Repair</button>
+          <button class="undoRepair" id="clearLastRepairBtn">Clear Last Repair</button>
+          <button class="fit" id="fitBtn">Fit Field Map</button>
+          <button class="clearRepairs" id="clearBtn">Clear Repairs</button>
+        </div>
+        <div class="buttonGrid hidden" id="perimeterTab">
+          <button class="lockPerimeter" id="lockPerimeterBtn">Hard Lock Perimeter</button>
+          <button class="clearPerimeter" id="clearPerimeterBtn">Clear Perimeter</button>
+        </div>
+        <div class="buttonGrid hidden" id="backupTab">
+          <button class="backupNow" id="backupBtn">Backup Now</button>
+          <button class="restoreBtn" id="restoreBtn">Restore Backup</button>
+          <input type="file" id="restoreInput" accept=".json,application/json">
+        </div>
+        <div class="buttonGrid hidden" id="exportTab">
+          <button class="csv" id="csvBtn">CSV</button>
+          <button class="geojson" id="geojsonBtn">GeoJSON</button>
+          <button class="kml" id="kmlBtn">KML</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-repair-points-v9";
-const LEGACY_KEYS = [
-  "linersync-repair-points-v9",
-  "linersync-repair-points-v8",
-  "linersync-repair-points-v7",
-  "linersync-repair-points-v6",
-  "linersync-repair-points-v5",
-  "linersync-repair-points-v4",
-  "linersync-repair-points-v3",
-  "linersync-simple-points-v2",
-  "linersync-simple-points-v1",
-  "linersync-simple-points-local-v2"
-];
-
-function normalizeSavedData(parsed){
-  if(Array.isArray(parsed)) return {points: parsed, perimeter: []};
-  if(parsed && typeof parsed === 'object') return {points: Array.isArray(parsed.points)?parsed.points:[], perimeter: Array.isArray(parsed.perimeter)?parsed.perimeter:[]};
-  return {points:[], perimeter:[]};
-}
-function loadSavedData(){
-  for(const key of LEGACY_KEYS){
-    try{
-      const raw = localStorage.getItem(key);
-      if(!raw) continue;
-      const parsed = JSON.parse(raw);
-      const data = normalizeSavedData(parsed);
-      if(key !== STORAGE_KEY) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      return data;
-    }catch(e){}
-  }
-  return {points:[], perimeter:[]};
-}
-
-let saved = loadSavedData();
-let points = saved.points;
-let perimeter = saved.perimeter;
-let map, markersLayer, trailLayer, perimeterLayer, currentMarker = null, accuracyCircle = null, lastPos = null;
-let repairType = "Bead";
-let taskActive = false;
-
-function normalizePoint(p, i){
-  return {id: p.id || String(Date.now()+i), repair_id: p.repair_id || p.id_label || `P-${String(i+1).padStart(3,"0")}`, repair_type: p.repair_type || "Bead", lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()};
-}
-function normalizePerimeterPoint(p, i){
-  return {id: p.id || `PER-${String(i+1).padStart(3,'0')}`, point_no: Number(p.point_no || (i+1)), lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()};
-}
-points = points.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-perimeter = perimeter.map(normalizePerimeterPoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-
-function saveAll(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({points, perimeter}));
-  document.getElementById("countPill").textContent = `Points: ${points.length}`;
-  document.getElementById("perimeterPill").textContent = `Perimeter: ${perimeter.length}`;
-}
-function setBackupStatus(text){ document.getElementById("backupPill").textContent = `Backup: ${text}`; }
-function updateTaskUI(){
-  document.getElementById("taskPill").textContent = `Task: ${taskActive ? "On" : "Off"}`;
-  document.getElementById("typebar").classList.toggle("hidden", !taskActive);
-  document.getElementById("captureRow").classList.toggle("hidden", !taskActive);
-  document.getElementById("startTaskBtn").textContent = taskActive ? "Task Started" : "Start Task";
-}
-function updateTypeUI(){
-  document.getElementById("typePill").textContent = `Type: ${repairType}`;
-  document.getElementById("beadBtn").classList.toggle("active", repairType === "Bead");
-  document.getElementById("patchBtn").classList.toggle("active", repairType === "Patch");
-}
-function formatTime(ts){ return new Date(ts).toLocaleString([], {year:"numeric", month:"2-digit", day:"2-digit", hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true}); }
+const STORAGE_KEY = "linersync-repair-points-v10";
+const LEGACY_KEYS = ["linersync-repair-points-v10","linersync-repair-points-v9","linersync-repair-points-v8","linersync-repair-points-v7","linersync-repair-points-v6","linersync-repair-points-v5","linersync-repair-points-v4","linersync-repair-points-v3","linersync-simple-points-v2","linersync-simple-points-v1","linersync-simple-points-local-v2"];
+function normalizeSavedData(parsed){ if(Array.isArray(parsed)) return {points: parsed, perimeter: []}; if(parsed && typeof parsed === 'object') return {points: Array.isArray(parsed.points)?parsed.points:[], perimeter: Array.isArray(parsed.perimeter)?parsed.perimeter:[]}; return {points:[], perimeter:[]}; }
+function loadSavedData(){ for(const key of LEGACY_KEYS){ try{ const raw=localStorage.getItem(key); if(!raw) continue; const parsed=JSON.parse(raw); const data=normalizeSavedData(parsed); if(key!==STORAGE_KEY) localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return data; }catch(e){} } return {points:[], perimeter:[]}; }
+let saved=loadSavedData(); let points=saved.points; let perimeter=saved.perimeter;
+let map, markersLayer, trailLayer, perimeterLayer, currentMarker=null, accuracyCircle=null, lastPos=null;
+let repairType="Bead", taskActive=false;
+function normalizePoint(p,i){ return {id:p.id||String(Date.now()+i), repair_id:p.repair_id||p.id_label||`P-${String(i+1).padStart(3,"0")}`, repair_type:p.repair_type||"Bead", lat:Number(p.lat), lng:Number(p.lng), accuracy:Number(p.accuracy||0), timestamp:p.timestamp||Date.now()}; }
+function normalizePerimeterPoint(p,i){ return {id:p.id||`PER-${String(i+1).padStart(3,'0')}`, point_no:Number(p.point_no||(i+1)), lat:Number(p.lat), lng:Number(p.lng), accuracy:Number(p.accuracy||0), timestamp:p.timestamp||Date.now()}; }
+points=points.map(normalizePoint).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)); perimeter=perimeter.map(normalizePerimeterPoint).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng));
+function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({points, perimeter})); document.getElementById("countPill").textContent=`Points: ${points.length}`; document.getElementById("perimeterPill").textContent=`Perimeter: ${perimeter.length}`; }
+function setBackupStatus(text){ document.getElementById("backupPill").textContent=`Backup: ${text}`; }
+function updateTaskUI(){ document.getElementById("taskPill").textContent=`Task: ${taskActive ? "On" : "Off"}`; document.getElementById("startTaskBtn").textContent=taskActive?"Task Started":"Start Task"; }
+function updateTypeUI(){ document.getElementById("typePill").textContent=`Type: ${repairType}`; document.getElementById("beadBtn").classList.toggle("active", repairType==="Bead"); document.getElementById("patchBtn").classList.toggle("active", repairType==="Patch"); }
+function formatTime(ts){ return new Date(ts).toLocaleString([], {year:"numeric",month:"2-digit",day:"2-digit",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true}); }
 function isoTime(ts){ return new Date(ts).toISOString(); }
 function xmlEscape(s){ return String(s).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c])); }
-function typeIndex(t){ return points.filter(p => (p.repair_type || "Bead") === t).length; }
-function nextRepairId(t){ return `${t === "Bead" ? "B" : "P"}-${String(typeIndex(t) + 1).padStart(3,"0")}`; }
-function markerColor(type){ return type === "Patch" ? "#c084fc" : "#facc15"; }
-function hasCaptureLock(){ return !!(lastPos && Number.isFinite(lastPos.accuracy) && lastPos.accuracy <= 5); }
-
-function updateGpsMeter(){
-  const bars = Array.from(document.querySelectorAll('#gpsMeter .gpsbar'));
-  let onCount = 0;
-  let cls = 'bad';
-  let txt = 'Weak';
-  if(lastPos && Number.isFinite(lastPos.accuracy)){
-    const a = lastPos.accuracy;
-    if(a <= 3){ onCount = 5; cls='on'; txt='Strong'; }
-    else if(a <= 5){ onCount = 4; cls='on'; txt='Locked'; }
-    else if(a <= 8){ onCount = 3; cls='warn'; txt='Okay'; }
-    else if(a <= 12){ onCount = 2; cls='warn'; txt='Weak'; }
-    else { onCount = 1; cls='bad'; txt='Poor'; }
-  }
-  bars.forEach((b, i) => { b.classList.remove('on','warn','bad'); if(i < onCount) b.classList.add(cls); });
-  document.getElementById('gpsSignalText').textContent = txt;
-  document.getElementById('gpsLockPill').textContent = `Capture Lock: ${hasCaptureLock() ? 'Yes' : 'No'}`;
-  document.getElementById('gpsLockPill').style.borderColor = hasCaptureLock() ? '#22c55e' : '#ef4444';
-}
-
-function getAllVisibleLatLngs(){
-  const latlngs = points.map(p => [p.lat, p.lng]).concat(perimeter.map(p => [p.lat, p.lng]));
-  if(lastPos && Number.isFinite(lastPos.lat) && Number.isFinite(lastPos.lng)) latlngs.push([lastPos.lat, lastPos.lng]);
-  return latlngs;
-}
-function fitFieldMap(){
-  const latlngs = getAllVisibleLatLngs();
-  if(!latlngs.length) return;
-  if(latlngs.length === 1){ map.setView(latlngs[0], 19); return; }
-  map.fitBounds(L.latLngBounds(latlngs), {padding:[35,35]});
-}
-function redrawRepairTrail(){ trailLayer.clearLayers(); if(points.length >= 2) L.polyline(points.map(p => [p.lat, p.lng]), {color:'#38bdf8', weight:3, opacity:0.85}).addTo(trailLayer); }
-function redrawPerimeter(){
-  perimeterLayer.clearLayers();
-  perimeter.forEach((p, i) => {
-    const m = L.circleMarker([p.lat, p.lng], {radius:8, color:'#ffffff', weight:1, fillColor:'#fb923c', fillOpacity:1}).addTo(perimeterLayer);
-    m.bindPopup(`Perimeter ${p.point_no}<br>Lat: ${p.lat.toFixed(7)}<br>Lng: ${p.lng.toFixed(7)}<br>Accuracy: ${Math.round(p.accuracy||0)} m<br>Time: ${xmlEscape(formatTime(p.timestamp))}`);
-  });
-  if(perimeter.length >= 2) L.polyline(perimeter.map(p => [p.lat,p.lng]), {color:'#fb923c', weight:4, opacity:0.95}).addTo(perimeterLayer);
-}
-function renderAll(){
-  markersLayer.clearLayers();
-  redrawRepairTrail();
-  redrawPerimeter();
-  points.forEach((p, i) => {
-    const marker = L.circleMarker([p.lat, p.lng], {radius: 7, color: "#0b1220", weight: 1, fillColor: markerColor(p.repair_type || "Bead"), fillOpacity: 0.95}).addTo(markersLayer);
-    marker.bindPopup(`<b>${xmlEscape(p.repair_id || `Point ${i+1}`)}</b><br>Type: ${xmlEscape(p.repair_type || "Bead")}<br>Lat: ${p.lat.toFixed(7)}<br>Lng: ${p.lng.toFixed(7)}<br>Accuracy: ${Math.round(p.accuracy || 0)} m<br>Time: ${xmlEscape(formatTime(p.timestamp))}`);
-  });
-  saveAll();
-}
-
-function setGps(text, ok=true){ const el = document.getElementById("gpsPill"); el.textContent = `GPS: ${text}`; el.style.borderColor = ok ? "#29406f" : "#6b1f1f"; }
-function setPerm(text){ document.getElementById("perm").textContent = text; }
-
-function initMap(){
-  map = L.map('map');
-  perimeterLayer = L.layerGroup().addTo(map);
-  trailLayer = L.layerGroup().addTo(map);
-  markersLayer = L.layerGroup().addTo(map);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 22, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-  renderAll();
-  updateTaskUI();
-  updateTypeUI();
-  updateGpsMeter();
-  setBackupStatus("Local only");
-  if(points.length || perimeter.length){ setPerm(`Recovered ${points.length} repairs and ${perimeter.length} perimeter points.`); fitFieldMap(); } else { map.setView([33.3943, -104.5230], 5); }
-}
-
-function drawCurrentPosition(){
-  if(!lastPos) return;
-  const latlng = [lastPos.lat, lastPos.lng];
-  if(currentMarker) currentMarker.setLatLng(latlng);
-  else { currentMarker = L.circleMarker(latlng, {radius: 9, color:'#ffffff', weight:2, fillColor:'#38bdf8', fillOpacity:1}).addTo(map); currentMarker.bindPopup('Current GPS location'); }
-  if(accuracyCircle){ accuracyCircle.setLatLng(latlng); accuracyCircle.setRadius(Math.max(1, lastPos.accuracy || 1)); }
-  else accuracyCircle = L.circle(latlng, {radius: Math.max(1, lastPos.accuracy || 1), color:'#38bdf8', weight:1, fillColor:'#38bdf8', fillOpacity:0.12}).addTo(map);
-}
-
-function updateLivePosition(position){
-  const { latitude, longitude, accuracy } = position.coords;
-  lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
-  setGps(`${Math.round(accuracy)}m`, true);
-  updateGpsMeter();
-  if(taskActive) setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`);
-  else setPerm("Field map shows current GPS, perimeter, and saved captures");
-  drawCurrentPosition();
-  if(taskActive || points.length || perimeter.length) fitFieldMap();
-}
-
-function startGps(){
-  if(!("geolocation" in navigator)){ setGps("Not supported", false); setPerm("This phone/browser does not support GPS"); updateGpsMeter(); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos => { updateLivePosition(pos); if(!points.length && !perimeter.length) map.setView([pos.coords.latitude, pos.coords.longitude], 19); },
-    err => { setGps("Error", false); setPerm("Allow location permission in Chrome and reload"); updateGpsMeter(); console.error(err); },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-  );
-  navigator.geolocation.watchPosition(updateLivePosition, err => { setGps("Error", false); updateGpsMeter(); console.error(err); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 });
-}
-
-function startTask(){ taskActive = true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`); fitFieldMap(); }
-function endTask(){ taskActive = false; updateTaskUI(); setPerm("Task ended. Field map still shows current GPS, perimeter, and saved captures."); fitFieldMap(); }
-
-function capturePoint(){
-  if(!taskActive){ alert("Tap Start Task first."); return; }
-  if(!lastPos){ alert("GPS not ready yet. Allow location, wait a few seconds, then tap again."); return; }
-  if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; }
-  const rid = prompt(`${repairType} ID`, nextRepairId(repairType)) || nextRepairId(repairType);
-  points.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), repair_id: rid, repair_type: repairType, lat: lastPos.lat, lng: lastPos.lng, accuracy: lastPos.accuracy, timestamp: Date.now() });
-  renderAll();
-  fitFieldMap();
-}
-function clearLastRepair(){
-  if(!points.length){ alert("No repair points to remove."); return; }
-  const removed = points.pop();
-  renderAll();
-  setPerm(`Last repair removed: ${removed.repair_id || 'last point'}`);
-  fitFieldMap();
-}
-
-function hardLockPerimeter(){
-  if(!lastPos){ alert("GPS not ready yet. Wait a few seconds and try again."); return; }
-  if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; }
-  perimeter.push({ id:`PER-${String(perimeter.length+1).padStart(3,'0')}`, point_no: perimeter.length+1, lat:lastPos.lat, lng:lastPos.lng, accuracy:lastPos.accuracy, timestamp:Date.now() });
-  renderAll();
-  setPerm(`Perimeter point ${perimeter.length} hard locked.`);
-  fitFieldMap();
-}
-function clearPerimeter(){ if(!confirm("Delete all perimeter points?")) return; perimeter = []; renderAll(); setPerm("Perimeter cleared."); fitFieldMap(); }
-
-function buildBackup(){ return { app: "LinerSync Repair Points", version: 9, exported_at: new Date().toISOString(), points, perimeter }; }
-function downloadFile(name, content, type){ const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-function backupNow(){ const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json"); setBackupStatus("JSON saved"); setPerm("Backup file downloaded to your phone. Use Restore Backup to pick it later."); }
-function restoreFromFile(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      const norm = normalizeSavedData(data);
-      points = norm.points.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-      perimeter = norm.perimeter.map(normalizePerimeterPoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-      renderAll();
-      fitFieldMap();
-      setBackupStatus("Restored");
-      setPerm(`Restored ${points.length} repairs and ${perimeter.length} perimeter points from backup.`);
-    } catch (err) {
-      alert("Backup file could not be restored.");
-      console.error(err);
-    }
-  };
-  reader.readAsText(file);
-}
-
-function buildGeoJSON(){
-  const repairFeatures = points.map((p, i) => ({ type: "Feature", properties: { feature_group:"repair", point_no: i + 1, repair_id: p.repair_id || `Point ${i+1}`, repair_type: p.repair_type || "Bead", accuracy_m: Math.round(p.accuracy || 0), timestamp: isoTime(p.timestamp), local_time: formatTime(p.timestamp) }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } }));
-  const perimeterFeatures = perimeter.map((p, i) => ({ type: "Feature", properties: { feature_group:"perimeter", point_no: i + 1, perimeter_id:`PER-${String(i+1).padStart(3,'0')}`, accuracy_m: Math.round(p.accuracy || 0), timestamp: isoTime(p.timestamp), local_time: formatTime(p.timestamp) }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } }));
-  return { type: "FeatureCollection", features: [...repairFeatures, ...perimeterFeatures] };
-}
-function buildCSV(){
-  const repairRows = points.map((p, i) => ["repair", i + 1, p.repair_id || `Point ${i+1}`, p.repair_type || "Bead", p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(","));
-  const perimeterRows = perimeter.map((p, i) => ["perimeter", i + 1, `PER-${String(i+1).padStart(3,'0')}`, "Perimeter", p.lat, p.lng, Math.round(p.accuracy || 0), isoTime(p.timestamp), `\"${formatTime(p.timestamp)}\"`].join(","));
-  return ["feature_group,point_no,id,type,latitude,longitude,accuracy_m,timestamp_iso,local_time", ...repairRows, ...perimeterRows].join("\n");
-}
-function buildKML(){
-  const repairPlacemarks = points.map((p, i) => `\n    <Placemark>\n      <name>${xmlEscape(p.repair_id || `Point ${i+1}`)}</name>\n      <description>${xmlEscape(`Type ${p.repair_type || "Bead"} | Accuracy ${Math.round(p.accuracy || 0)} m | ${formatTime(p.timestamp)}`)}</description>\n      <styleUrl>#${p.repair_type === "Patch" ? "patchStyle" : "beadStyle"}</styleUrl>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
-  const perimeterPlacemarks = perimeter.map((p, i) => `\n    <Placemark>\n      <name>${xmlEscape(`PER-${String(i+1).padStart(3,'0')}`)}</name>\n      <description>${xmlEscape(`Perimeter point | Accuracy ${Math.round(p.accuracy || 0)} m | ${formatTime(p.timestamp)}`)}</description>\n      <styleUrl>#perimeterStyle</styleUrl>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join("");
-  const perimeterLine = perimeter.length >= 2 ? `\n    <Placemark>\n      <name>Cell Perimeter</name>\n      <styleUrl>#perimeterLineStyle</styleUrl>\n      <LineString><tessellate>1</tessellate><coordinates>${perimeter.map(p => `${p.lng},${p.lat},0`).join(' ')}</coordinates></LineString>\n    </Placemark>` : "";
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Repair Points</name>\n    <Style id="beadStyle"><IconStyle><color>ff00ffff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="patchStyle"><IconStyle><color>ffff00ff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="perimeterStyle"><IconStyle><color>ff0099ff</color><scale>1.2</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="perimeterLineStyle"><LineStyle><color>ff0099ff</color><width>4</width></LineStyle></Style>${repairPlacemarks}${perimeterPlacemarks}${perimeterLine}\n  </Document>\n</kml>`;
-}
-function downloadCSV(){ if(!points.length && !perimeter.length){ alert("No data captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-field-${stamp}.csv`, buildCSV(), "text/csv"); }
-function downloadGeoJSON(){ if(!points.length && !perimeter.length){ alert("No data captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-field-${stamp}.geojson`, JSON.stringify(buildGeoJSON(), null, 2), "application/geo+json"); }
-function downloadKML(){ if(!points.length && !perimeter.length){ alert("No data captured yet."); return; } const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-field-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml"); setPerm("KML downloaded with repairs and perimeter. Import the KML file from your device in Google Earth."); }
-function clearPoints(){ if(!confirm("Delete all repair points?")) return; points = []; renderAll(); fitFieldMap(); }
-
+function typeIndex(t){ return points.filter(p=>(p.repair_type||"Bead")===t).length; }
+function nextRepairId(t){ return `${t==="Bead"?"B":"P"}-${String(typeIndex(t)+1).padStart(3,"0")}`; }
+function markerColor(type){ return type==="Patch"?"#c084fc":"#facc15"; }
+function hasCaptureLock(){ return !!(lastPos && Number.isFinite(lastPos.accuracy) && lastPos.accuracy<=5); }
+function updateGpsMeter(){ const bars=[...document.querySelectorAll('#gpsMeter .gpsbar')]; let onCount=0, cls='bad', txt='Weak'; if(lastPos&&Number.isFinite(lastPos.accuracy)){ const a=lastPos.accuracy; if(a<=3){onCount=5;cls='on';txt='Strong';} else if(a<=5){onCount=4;cls='on';txt='Locked';} else if(a<=8){onCount=3;cls='warn';txt='Okay';} else if(a<=12){onCount=2;cls='warn';txt='Weak';} else {onCount=1;cls='bad';txt='Poor';}} bars.forEach((b,i)=>{b.classList.remove('on','warn','bad'); if(i<onCount) b.classList.add(cls);}); document.getElementById('gpsSignalText').textContent=txt; document.getElementById('gpsLockPill').textContent=`Capture Lock: ${hasCaptureLock()?'Yes':'No'}`; document.getElementById('gpsLockPill').style.borderColor=hasCaptureLock()?'#22c55e':'#ef4444'; }
+function getAllVisibleLatLngs(){ const latlngs=points.map(p=>[p.lat,p.lng]).concat(perimeter.map(p=>[p.lat,p.lng])); if(lastPos&&Number.isFinite(lastPos.lat)&&Number.isFinite(lastPos.lng)) latlngs.push([lastPos.lat,lastPos.lng]); return latlngs; }
+function fitFieldMap(){ const latlngs=getAllVisibleLatLngs(); if(!latlngs.length) return; if(latlngs.length===1){ map.setView(latlngs[0],19); return; } map.fitBounds(L.latLngBounds(latlngs), {padding:[35,35]}); }
+function redrawRepairTrail(){ trailLayer.clearLayers(); if(points.length>=2) L.polyline(points.map(p=>[p.lat,p.lng]), {color:'#38bdf8',weight:3,opacity:0.85}).addTo(trailLayer); }
+function redrawPerimeter(){ perimeterLayer.clearLayers(); perimeter.forEach((p,i)=>{ const m=L.circleMarker([p.lat,p.lng], {radius:8,color:'#ffffff',weight:1,fillColor:'#fb923c',fillOpacity:1}).addTo(perimeterLayer); m.bindPopup(`Perimeter ${p.point_no}<br>Lat: ${p.lat.toFixed(7)}<br>Lng: ${p.lng.toFixed(7)}<br>Accuracy: ${Math.round(p.accuracy||0)} m<br>Time: ${xmlEscape(formatTime(p.timestamp))}`);}); if(perimeter.length>=2) L.polyline(perimeter.map(p=>[p.lat,p.lng]), {color:'#fb923c',weight:4,opacity:0.95}).addTo(perimeterLayer); }
+function renderAll(){ markersLayer.clearLayers(); redrawRepairTrail(); redrawPerimeter(); points.forEach((p,i)=>{ const marker=L.circleMarker([p.lat,p.lng], {radius:7,color:'#0b1220',weight:1,fillColor:markerColor(p.repair_type||"Bead"),fillOpacity:0.95}).addTo(markersLayer); marker.bindPopup(`<b>${xmlEscape(p.repair_id||`Point ${i+1}`)}</b><br>Type: ${xmlEscape(p.repair_type||"Bead")}<br>Lat: ${p.lat.toFixed(7)}<br>Lng: ${p.lng.toFixed(7)}<br>Accuracy: ${Math.round(p.accuracy||0)} m<br>Time: ${xmlEscape(formatTime(p.timestamp))}`);}); saveAll(); }
+function setGps(text, ok=true){ const el=document.getElementById("gpsPill"); el.textContent=`GPS: ${text}`; el.style.borderColor=ok?"#29406f":"#6b1f1f"; }
+function setPerm(text){ document.getElementById("perm").textContent=text; }
+function initMap(){ map=L.map('map',{zoomControl:true}); perimeterLayer=L.layerGroup().addTo(map); trailLayer=L.layerGroup().addTo(map); markersLayer=L.layerGroup().addTo(map); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22, attribution:'&copy; OpenStreetMap contributors'}).addTo(map); renderAll(); updateTaskUI(); updateTypeUI(); updateGpsMeter(); setBackupStatus("Local only"); if(points.length||perimeter.length){ setPerm(`Recovered ${points.length} repairs and ${perimeter.length} perimeter points.`); fitFieldMap(); } else { map.setView([33.3943,-104.5230],5); } }
+function drawCurrentPosition(){ if(!lastPos) return; const latlng=[lastPos.lat,lastPos.lng]; if(currentMarker) currentMarker.setLatLng(latlng); else { currentMarker=L.circleMarker(latlng,{radius:9,color:'#ffffff',weight:2,fillColor:'#38bdf8',fillOpacity:1}).addTo(map); currentMarker.bindPopup('Current GPS location'); } if(accuracyCircle){ accuracyCircle.setLatLng(latlng); accuracyCircle.setRadius(Math.max(1,lastPos.accuracy||1)); } else { accuracyCircle=L.circle(latlng,{radius:Math.max(1,lastPos.accuracy||1),color:'#38bdf8',weight:1,fillColor:'#38bdf8',fillOpacity:0.12}).addTo(map); } }
+function updateLivePosition(position){ const {latitude,longitude,accuracy}=position.coords; lastPos={lat:latitude,lng:longitude,accuracy,timestamp:Date.now()}; setGps(`${Math.round(accuracy)}m`,true); updateGpsMeter(); if(taskActive) setPerm(`Task running: ${repairType} | Map always visible`); else setPerm("Field map shows current GPS, perimeter, and saved captures"); drawCurrentPosition(); }
+function startGps(){ if(!("geolocation" in navigator)){ setGps("Not supported",false); setPerm("This phone/browser does not support GPS"); updateGpsMeter(); return; } navigator.geolocation.getCurrentPosition(pos=>{ updateLivePosition(pos); if(!points.length&&!perimeter.length) map.setView([pos.coords.latitude,pos.coords.longitude],19);}, err=>{ setGps("Error",false); setPerm("Allow location permission in Chrome and reload"); updateGpsMeter(); console.error(err);},{enableHighAccuracy:true,timeout:15000,maximumAge:0}); navigator.geolocation.watchPosition(updateLivePosition, err=>{ setGps("Error",false); updateGpsMeter(); console.error(err); }, {enableHighAccuracy:true,timeout:15000,maximumAge:1000}); }
+function startTask(){ taskActive=true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType} | Map always visible`); }
+function endTask(){ taskActive=false; updateTaskUI(); setPerm("Task ended. Map still visible."); }
+function capturePoint(){ if(!taskActive){ alert("Tap Start Task first."); return; } if(!lastPos){ alert("GPS not ready yet. Allow location, wait a few seconds, then tap again."); return; } if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; } const rid=prompt(`${repairType} ID`, nextRepairId(repairType))||nextRepairId(repairType); points.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),repair_id:rid,repair_type:repairType,lat:lastPos.lat,lng:lastPos.lng,accuracy:lastPos.accuracy,timestamp:Date.now()}); renderAll(); }
+function clearLastRepair(){ if(!points.length){ alert("No repair points to remove."); return; } const removed=points.pop(); renderAll(); setPerm(`Last repair removed: ${removed.repair_id||'last point'}`); }
+function hardLockPerimeter(){ if(!lastPos){ alert("GPS not ready yet. Wait a few seconds and try again."); return; } if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; } perimeter.push({id:`PER-${String(perimeter.length+1).padStart(3,'0')}`,point_no:perimeter.length+1,lat:lastPos.lat,lng:lastPos.lng,accuracy:lastPos.accuracy,timestamp:Date.now()}); renderAll(); setPerm(`Perimeter point ${perimeter.length} hard locked.`); }
+function clearPerimeter(){ if(!confirm("Delete all perimeter points?")) return; perimeter=[]; renderAll(); setPerm("Perimeter cleared."); }
+function buildBackup(){ return {app:"LinerSync Field App", version:10, exported_at:new Date().toISOString(), points, perimeter}; }
+function downloadFile(name, content, type){ const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+function backupNow(){ const stamp=new Date().toISOString().replace(/[:.]/g,"-"); downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(),null,2), "application/json"); setBackupStatus("JSON saved"); setPerm("Backup file downloaded to your phone."); }
+function restoreFromFile(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(reader.result); const norm=normalizeSavedData(data); points=norm.points.map(normalizePoint).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)); perimeter=norm.perimeter.map(normalizePerimeterPoint).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)); renderAll(); fitFieldMap(); setBackupStatus("Restored"); setPerm(`Restored ${points.length} repairs and ${perimeter.length} perimeter points from backup.`);}catch(err){ alert("Backup file could not be restored."); console.error(err);} }; reader.readAsText(file); }
+function buildGeoJSON(){ const repairFeatures=points.map((p,i)=>({type:"Feature",properties:{feature_group:"repair",point_no:i+1,repair_id:p.repair_id||`Point ${i+1}`,repair_type:p.repair_type||"Bead",accuracy_m:Math.round(p.accuracy||0),timestamp:isoTime(p.timestamp),local_time:formatTime(p.timestamp)},geometry:{type:"Point",coordinates:[p.lng,p.lat]}})); const perimeterFeatures=perimeter.map((p,i)=>({type:"Feature",properties:{feature_group:"perimeter",point_no:i+1,perimeter_id:`PER-${String(i+1).padStart(3,'0')}`,accuracy_m:Math.round(p.accuracy||0),timestamp:isoTime(p.timestamp),local_time:formatTime(p.timestamp)},geometry:{type:"Point",coordinates:[p.lng,p.lat]}})); return {type:"FeatureCollection",features:[...repairFeatures,...perimeterFeatures]}; }
+function buildCSV(){ const repairRows=points.map((p,i)=>["repair",i+1,p.repair_id||`Point ${i+1}`,p.repair_type||"Bead",p.lat,p.lng,Math.round(p.accuracy||0),isoTime(p.timestamp),`\"${formatTime(p.timestamp)}\"`].join(",")); const perimeterRows=perimeter.map((p,i)=>["perimeter",i+1,`PER-${String(i+1).padStart(3,'0')}`,"Perimeter",p.lat,p.lng,Math.round(p.accuracy||0),isoTime(p.timestamp),`\"${formatTime(p.timestamp)}\"`].join(",")); return ["feature_group,point_no,id,type,latitude,longitude,accuracy_m,timestamp_iso,local_time",...repairRows,...perimeterRows].join("\n"); }
+function buildKML(){ const repairPlacemarks=points.map((p,i)=>`\n    <Placemark>\n      <name>${xmlEscape(p.repair_id||`Point ${i+1}`)}</name>\n      <description>${xmlEscape(`Type ${p.repair_type||"Bead"} | Accuracy ${Math.round(p.accuracy||0)} m | ${formatTime(p.timestamp)}`)}</description>\n      <styleUrl>#${p.repair_type==="Patch"?"patchStyle":"beadStyle"}</styleUrl>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join(""); const perimeterPlacemarks=perimeter.map((p,i)=>`\n    <Placemark>\n      <name>${xmlEscape(`PER-${String(i+1).padStart(3,'0')}`)}</name>\n      <description>${xmlEscape(`Perimeter point | Accuracy ${Math.round(p.accuracy||0)} m | ${formatTime(p.timestamp)}`)}</description>\n      <styleUrl>#perimeterStyle</styleUrl>\n      <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>\n    </Placemark>`).join(""); const perimeterLine=perimeter.length>=2?`\n    <Placemark>\n      <name>Cell Perimeter</name>\n      <styleUrl>#perimeterLineStyle</styleUrl>\n      <LineString><tessellate>1</tessellate><coordinates>${perimeter.map(p=>`${p.lng},${p.lat},0`).join(' ')}</coordinates></LineString>\n    </Placemark>`:""; return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>LinerSync Field App</name>\n    <Style id="beadStyle"><IconStyle><color>ff00ffff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="patchStyle"><IconStyle><color>ffff00ff</color><scale>1.1</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="perimeterStyle"><IconStyle><color>ff0099ff</color><scale>1.2</scale></IconStyle><LabelStyle><scale>1.0</scale></LabelStyle></Style>\n    <Style id="perimeterLineStyle"><LineStyle><color>ff0099ff</color><width>4</width></LineStyle></Style>${repairPlacemarks}${perimeterPlacemarks}${perimeterLine}\n  </Document>\n</kml>`; }
+function downloadCSV(){ if(!points.length&&!perimeter.length){ alert("No data captured yet."); return; } const stamp=new Date().toISOString().replace(/[:.]/g,"-"); downloadFile(`linersync-field-${stamp}.csv`, buildCSV(), "text/csv"); }
+function downloadGeoJSON(){ if(!points.length&&!perimeter.length){ alert("No data captured yet."); return; } const stamp=new Date().toISOString().replace(/[:.]/g,"-"); downloadFile(`linersync-field-${stamp}.geojson`, JSON.stringify(buildGeoJSON(),null,2), "application/geo+json"); }
+function downloadKML(){ if(!points.length&&!perimeter.length){ alert("No data captured yet."); return; } const stamp=new Date().toISOString().replace(/[:.]/g,"-"); downloadFile(`linersync-field-${stamp}.kml`, buildKML(), "application/vnd.google-earth.kml+xml"); setPerm("KML downloaded with repairs and perimeter."); }
+function clearPoints(){ if(!confirm("Delete all repair points?")) return; points=[]; renderAll(); }
+function setTab(tab){ document.querySelectorAll('.tabBtn[data-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.tab===tab)); document.getElementById('taskTab').classList.toggle('hidden', tab!=='task'); document.getElementById('repairTypeTab').classList.toggle('hidden', tab!=='repair'); document.getElementById('repairTab').classList.toggle('hidden', tab!=='repair'); document.getElementById('perimeterTab').classList.toggle('hidden', tab!=='perimeter'); document.getElementById('backupTab').classList.toggle('hidden', tab!=='backup'); document.getElementById('exportTab').classList.toggle('hidden', tab!=='export'); }
+document.querySelectorAll('.tabBtn[data-tab]').forEach(btn=>btn.addEventListener('click',()=>setTab(btn.dataset.tab)));
 document.getElementById("startTaskBtn").addEventListener("click", startTask);
 document.getElementById("endTaskBtn").addEventListener("click", endTask);
 document.getElementById("lockPerimeterBtn").addEventListener("click", hardLockPerimeter);
 document.getElementById("clearPerimeterBtn").addEventListener("click", clearPerimeter);
 document.getElementById("clearLastRepairBtn").addEventListener("click", clearLastRepair);
+document.getElementById("clearBtn").addEventListener("click", clearPoints);
 document.getElementById("backupBtn").addEventListener("click", backupNow);
 document.getElementById("restoreBtn").addEventListener("click", ()=>document.getElementById("restoreInput").click());
-document.getElementById("restoreInput").addEventListener("change", (e)=>{ if(e.target.files && e.target.files[0]) restoreFromFile(e.target.files[0]); e.target.value = ""; });
-document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType = "Bead"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`); });
-document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType = "Patch"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`); });
+document.getElementById("restoreInput").addEventListener("change", (e)=>{ if(e.target.files&&e.target.files[0]) restoreFromFile(e.target.files[0]); e.target.value=""; });
+document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType="Bead"; updateTypeUI(); });
+document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType="Patch"; updateTypeUI(); });
 document.getElementById("captureBtn").addEventListener("click", capturePoint);
 document.getElementById("fitBtn").addEventListener("click", fitFieldMap);
 document.getElementById("csvBtn").addEventListener("click", downloadCSV);
 document.getElementById("geojsonBtn").addEventListener("click", downloadGeoJSON);
 document.getElementById("kmlBtn").addEventListener("click", downloadKML);
-
-initMap();
-startGps();
+initMap(); setTab('task'); startGps();
 </script>
 </body>
 </html>
