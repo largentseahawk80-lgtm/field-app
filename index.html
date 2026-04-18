@@ -8,7 +8,7 @@
   <style>
     :root{
       --bg:#0b1220; --panel:#121c31; --text:#eaf1ff; --muted:#9fb2d8;
-      --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15; --purple:#c084fc;
+      --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15; --purple:#c084fc; --teal:#2dd4bf;
     }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
@@ -16,9 +16,11 @@
     .top{padding:10px;background:linear-gradient(180deg,#0f1830,#0b1220);border-bottom:1px solid var(--line)}
     .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 6px}
     .status{font-size:15px;color:var(--muted);margin-bottom:8px;text-align:center}
-    .taskbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .taskbar,.backupbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
     .startTask{background:var(--green)}
     .endTask{background:var(--blue)}
+    .backupNow{background:var(--teal)}
+    .restoreBtn{background:var(--gold)}
     .typebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
     .typebtn{border:1px solid var(--line);border-radius:16px;padding:14px 10px;font-size:16px;font-weight:800;color:var(--text);background:#16233e;cursor:pointer}
     .typebtn.active{outline:3px solid rgba(250,204,21,.35);background:#22345b}
@@ -37,6 +39,7 @@
     .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700}
     .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
     .hidden{display:none !important}
+    input[type=file]{display:none}
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
 </head>
@@ -48,6 +51,11 @@
     <div class="taskbar">
       <button class="startTask" id="startTaskBtn">Start Task</button>
       <button class="endTask" id="endTaskBtn">End Task</button>
+    </div>
+    <div class="backupbar">
+      <button class="backupNow" id="backupBtn">Backup Now</button>
+      <button class="restoreBtn" id="restoreBtn">Restore Backup</button>
+      <input type="file" id="restoreInput" accept=".json,application/json">
     </div>
     <div class="typebar hidden" id="typebar">
       <button class="typebtn active" id="beadBtn">Bead</button>
@@ -71,6 +79,7 @@
     <div class="actions">
       <div class="pill" id="taskPill">Task: Off</div>
       <div class="pill" id="typePill">Type: Bead</div>
+      <div class="pill" id="backupPill">Backup: Local only</div>
       <button class="clear" id="clearBtn">Clear</button>
       <div class="pill" id="gpsPill">GPS: Waiting</div>
     </div>
@@ -79,7 +88,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-repair-points-v4";
+const STORAGE_KEY = "linersync-repair-points-v5";
 let points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 let map, markersLayer, currentMarker = null, lastPos = null;
 let repairType = "Bead";
@@ -88,6 +97,10 @@ let taskActive = false;
 function savePoints(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
   document.getElementById("countPill").textContent = `Points: ${points.length}`;
+}
+
+function setBackupStatus(text){
+  document.getElementById("backupPill").textContent = `Backup: ${text}`;
 }
 
 function updateTaskUI(){
@@ -149,6 +162,7 @@ function initMap(){
   renderPoints();
   updateTaskUI();
   updateTypeUI();
+  setBackupStatus("Local only");
   if(points.length){ fitSavedPoints(); } else { map.setView([33.3943, -104.5230], 5); }
 }
 
@@ -215,12 +229,48 @@ function capturePoint(){
   renderPoints();
 }
 
+function buildBackup(){
+  return {
+    app: "LinerSync Repair Points",
+    version: 5,
+    exported_at: new Date().toISOString(),
+    points
+  };
+}
+
 function downloadFile(name, content, type){
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function backupNow(){
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json");
+  setBackupStatus("JSON saved");
+  setPerm("Backup file downloaded.");
+}
+
+function restoreFromFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const restored = Array.isArray(data) ? data : Array.isArray(data.points) ? data.points : null;
+      if(!restored) throw new Error("Invalid backup format");
+      points = restored;
+      renderPoints();
+      fitSavedPoints();
+      setBackupStatus("Restored");
+      setPerm(`Restored ${points.length} points from backup.`);
+    } catch (err) {
+      alert("Backup file could not be restored.");
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function buildGeoJSON(){
@@ -244,11 +294,15 @@ function clearPoints(){
   if(!confirm("Delete all saved points on this phone?")) return;
   points = [];
   renderPoints();
+  setBackupStatus("Local only");
   if(currentMarker && lastPos){ map.setView([lastPos.lat, lastPos.lng], 19); }
 }
 
 document.getElementById("startTaskBtn").addEventListener("click", startTask);
 document.getElementById("endTaskBtn").addEventListener("click", endTask);
+document.getElementById("backupBtn").addEventListener("click", backupNow);
+document.getElementById("restoreBtn").addEventListener("click", ()=>document.getElementById("restoreInput").click());
+document.getElementById("restoreInput").addEventListener("change", (e)=>{ if(e.target.files && e.target.files[0]) restoreFromFile(e.target.files[0]); e.target.value = ""; });
 document.getElementById("beadBtn").addEventListener("click", ()=>{ repairType = "Bead"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType}`); });
 document.getElementById("patchBtn").addEventListener("click", ()=>{ repairType = "Patch"; updateTypeUI(); if(taskActive) setPerm(`Task running: ${repairType}`); });
 document.getElementById("captureBtn").addEventListener("click", capturePoint);
