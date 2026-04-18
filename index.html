@@ -16,7 +16,7 @@
     .top{padding:10px;background:linear-gradient(180deg,#0f1830,#0b1220);border-bottom:1px solid var(--line)}
     .title{font-size:28px;font-weight:800;text-align:center;margin:4px 0 6px}
     .status{font-size:15px;color:var(--muted);margin-bottom:8px;text-align:center}
-    .taskbar,.backupbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .taskbar,.backupbar,.repairbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
     .perimeterbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
     .startTask{background:var(--green)}
     .endTask{background:var(--blue)}
@@ -24,6 +24,8 @@
     .restoreBtn{background:var(--gold)}
     .lockPerimeter{background:var(--orange)}
     .clearPerimeter{background:#64748b;color:#fff}
+    .undoRepair{background:#f87171;color:#07111f}
+    .clearRepairs{background:var(--red);color:#fff}
     .typebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
     .typebtn{border:1px solid var(--line);border-radius:16px;padding:14px 10px;font-size:16px;font-weight:800;color:var(--text);background:#16233e;cursor:pointer}
     .typebtn.active{outline:3px solid rgba(250,204,21,.35);background:#22345b}
@@ -36,13 +38,18 @@
     .csv{background:var(--blue)}
     .geojson{background:var(--gold)}
     .kml{background:var(--purple)}
-    .clear{background:var(--red);color:white;padding:10px 14px;font-size:14px}
     #map{height:100%;width:100%}
     .bottom{padding:10px;background:linear-gradient(0deg,#0f1830,#0b1220);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
     .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700}
     .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
     .hidden{display:none !important}
     input[type=file]{display:none}
+    .gpsmeter{display:flex;align-items:flex-end;gap:3px;height:18px}
+    .gpsbar{width:6px;border-radius:2px;background:#334155;opacity:.35}
+    .gpsbar.b1{height:5px}.gpsbar.b2{height:8px}.gpsbar.b3{height:11px}.gpsbar.b4{height:14px}.gpsbar.b5{height:17px}
+    .gpsbar.on{background:#22c55e;opacity:1}
+    .gpsbar.warn{background:#facc15;opacity:1}
+    .gpsbar.bad{background:#ef4444;opacity:1}
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
 </head>
@@ -58,6 +65,10 @@
     <div class="perimeterbar">
       <button class="lockPerimeter" id="lockPerimeterBtn">Hard Lock Perimeter</button>
       <button class="clearPerimeter" id="clearPerimeterBtn">Clear Perimeter</button>
+    </div>
+    <div class="repairbar">
+      <button class="undoRepair" id="clearLastRepairBtn">Clear Last Repair</button>
+      <button class="clearRepairs" id="clearBtn">Clear Repairs</button>
     </div>
     <div class="backupbar">
       <button class="backupNow" id="backupBtn">Backup Now</button>
@@ -88,16 +99,18 @@
       <div class="pill" id="taskPill">Task: Off</div>
       <div class="pill" id="typePill">Type: Bead</div>
       <div class="pill" id="backupPill">Backup: Local only</div>
-      <button class="clear" id="clearBtn">Clear Repairs</button>
       <div class="pill" id="gpsPill">GPS: Waiting</div>
+      <div class="pill" id="gpsLockPill">Capture Lock: No</div>
+      <div class="pill" id="gpsSignalPill"><span id="gpsSignalText">Signal</span> <span class="gpsmeter" id="gpsMeter"><span class="gpsbar b1"></span><span class="gpsbar b2"></span><span class="gpsbar b3"></span><span class="gpsbar b4"></span><span class="gpsbar b5"></span></span></div>
     </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script>
-const STORAGE_KEY = "linersync-repair-points-v8";
+const STORAGE_KEY = "linersync-repair-points-v9";
 const LEGACY_KEYS = [
+  "linersync-repair-points-v9",
   "linersync-repair-points-v8",
   "linersync-repair-points-v7",
   "linersync-repair-points-v6",
@@ -114,7 +127,6 @@ function normalizeSavedData(parsed){
   if(parsed && typeof parsed === 'object') return {points: Array.isArray(parsed.points)?parsed.points:[], perimeter: Array.isArray(parsed.perimeter)?parsed.perimeter:[]};
   return {points:[], perimeter:[]};
 }
-
 function loadSavedData(){
   for(const key of LEGACY_KEYS){
     try{
@@ -137,19 +149,10 @@ let repairType = "Bead";
 let taskActive = false;
 
 function normalizePoint(p, i){
-  return {
-    id: p.id || String(Date.now()+i),
-    repair_id: p.repair_id || p.id_label || `P-${String(i+1).padStart(3,"0")}`,
-    repair_type: p.repair_type || "Bead",
-    lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()
-  };
+  return {id: p.id || String(Date.now()+i), repair_id: p.repair_id || p.id_label || `P-${String(i+1).padStart(3,"0")}`, repair_type: p.repair_type || "Bead", lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()};
 }
 function normalizePerimeterPoint(p, i){
-  return {
-    id: p.id || `PER-${String(i+1).padStart(3,'0')}`,
-    point_no: Number(p.point_no || (i+1)),
-    lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()
-  };
+  return {id: p.id || `PER-${String(i+1).padStart(3,'0')}`, point_no: Number(p.point_no || (i+1)), lat: Number(p.lat), lng: Number(p.lng), accuracy: Number(p.accuracy || 0), timestamp: p.timestamp || Date.now()};
 }
 points = points.map(normalizePoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 perimeter = perimeter.map(normalizePerimeterPoint).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
@@ -177,6 +180,26 @@ function xmlEscape(s){ return String(s).replace(/[<>&"']/g, c => ({'<':'&lt;','>
 function typeIndex(t){ return points.filter(p => (p.repair_type || "Bead") === t).length; }
 function nextRepairId(t){ return `${t === "Bead" ? "B" : "P"}-${String(typeIndex(t) + 1).padStart(3,"0")}`; }
 function markerColor(type){ return type === "Patch" ? "#c084fc" : "#facc15"; }
+function hasCaptureLock(){ return !!(lastPos && Number.isFinite(lastPos.accuracy) && lastPos.accuracy <= 5); }
+
+function updateGpsMeter(){
+  const bars = Array.from(document.querySelectorAll('#gpsMeter .gpsbar'));
+  let onCount = 0;
+  let cls = 'bad';
+  let txt = 'Weak';
+  if(lastPos && Number.isFinite(lastPos.accuracy)){
+    const a = lastPos.accuracy;
+    if(a <= 3){ onCount = 5; cls='on'; txt='Strong'; }
+    else if(a <= 5){ onCount = 4; cls='on'; txt='Locked'; }
+    else if(a <= 8){ onCount = 3; cls='warn'; txt='Okay'; }
+    else if(a <= 12){ onCount = 2; cls='warn'; txt='Weak'; }
+    else { onCount = 1; cls='bad'; txt='Poor'; }
+  }
+  bars.forEach((b, i) => { b.classList.remove('on','warn','bad'); if(i < onCount) b.classList.add(cls); });
+  document.getElementById('gpsSignalText').textContent = txt;
+  document.getElementById('gpsLockPill').textContent = `Capture Lock: ${hasCaptureLock() ? 'Yes' : 'No'}`;
+  document.getElementById('gpsLockPill').style.borderColor = hasCaptureLock() ? '#22c55e' : '#ef4444';
+}
 
 function getAllVisibleLatLngs(){
   const latlngs = points.map(p => [p.lat, p.lng]).concat(perimeter.map(p => [p.lat, p.lng]));
@@ -189,11 +212,7 @@ function fitFieldMap(){
   if(latlngs.length === 1){ map.setView(latlngs[0], 19); return; }
   map.fitBounds(L.latLngBounds(latlngs), {padding:[35,35]});
 }
-
-function redrawRepairTrail(){
-  trailLayer.clearLayers();
-  if(points.length >= 2) L.polyline(points.map(p => [p.lat, p.lng]), {color:'#38bdf8', weight:3, opacity:0.85}).addTo(trailLayer);
-}
+function redrawRepairTrail(){ trailLayer.clearLayers(); if(points.length >= 2) L.polyline(points.map(p => [p.lat, p.lng]), {color:'#38bdf8', weight:3, opacity:0.85}).addTo(trailLayer); }
 function redrawPerimeter(){
   perimeterLayer.clearLayers();
   perimeter.forEach((p, i) => {
@@ -202,7 +221,6 @@ function redrawPerimeter(){
   });
   if(perimeter.length >= 2) L.polyline(perimeter.map(p => [p.lat,p.lng]), {color:'#fb923c', weight:4, opacity:0.95}).addTo(perimeterLayer);
 }
-
 function renderAll(){
   markersLayer.clearLayers();
   redrawRepairTrail();
@@ -226,6 +244,7 @@ function initMap(){
   renderAll();
   updateTaskUI();
   updateTypeUI();
+  updateGpsMeter();
   setBackupStatus("Local only");
   if(points.length || perimeter.length){ setPerm(`Recovered ${points.length} repairs and ${perimeter.length} perimeter points.`); fitFieldMap(); } else { map.setView([33.3943, -104.5230], 5); }
 }
@@ -243,6 +262,7 @@ function updateLivePosition(position){
   const { latitude, longitude, accuracy } = position.coords;
   lastPos = { lat: latitude, lng: longitude, accuracy, timestamp: Date.now() };
   setGps(`${Math.round(accuracy)}m`, true);
+  updateGpsMeter();
   if(taskActive) setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`);
   else setPerm("Field map shows current GPS, perimeter, and saved captures");
   drawCurrentPosition();
@@ -250,13 +270,13 @@ function updateLivePosition(position){
 }
 
 function startGps(){
-  if(!("geolocation" in navigator)){ setGps("Not supported", false); setPerm("This phone/browser does not support GPS"); return; }
+  if(!("geolocation" in navigator)){ setGps("Not supported", false); setPerm("This phone/browser does not support GPS"); updateGpsMeter(); return; }
   navigator.geolocation.getCurrentPosition(
     pos => { updateLivePosition(pos); if(!points.length && !perimeter.length) map.setView([pos.coords.latitude, pos.coords.longitude], 19); },
-    err => { setGps("Error", false); setPerm("Allow location permission in Chrome and reload"); console.error(err); },
+    err => { setGps("Error", false); setPerm("Allow location permission in Chrome and reload"); updateGpsMeter(); console.error(err); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
-  navigator.geolocation.watchPosition(updateLivePosition, err => { setGps("Error", false); console.error(err); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 });
+  navigator.geolocation.watchPosition(updateLivePosition, err => { setGps("Error", false); updateGpsMeter(); console.error(err); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 });
 }
 
 function startTask(){ taskActive = true; updateTaskUI(); updateTypeUI(); setPerm(`Task running: ${repairType} | Current + captures + perimeter visible`); fitFieldMap(); }
@@ -265,31 +285,33 @@ function endTask(){ taskActive = false; updateTaskUI(); setPerm("Task ended. Fie
 function capturePoint(){
   if(!taskActive){ alert("Tap Start Task first."); return; }
   if(!lastPos){ alert("GPS not ready yet. Allow location, wait a few seconds, then tap again."); return; }
+  if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; }
   const rid = prompt(`${repairType} ID`, nextRepairId(repairType)) || nextRepairId(repairType);
   points.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), repair_id: rid, repair_type: repairType, lat: lastPos.lat, lng: lastPos.lng, accuracy: lastPos.accuracy, timestamp: Date.now() });
   renderAll();
   fitFieldMap();
 }
+function clearLastRepair(){
+  if(!points.length){ alert("No repair points to remove."); return; }
+  const removed = points.pop();
+  renderAll();
+  setPerm(`Last repair removed: ${removed.repair_id || 'last point'}`);
+  fitFieldMap();
+}
 
 function hardLockPerimeter(){
   if(!lastPos){ alert("GPS not ready yet. Wait a few seconds and try again."); return; }
+  if(!hasCaptureLock()){ alert("GPS not locked enough yet. Wait for Capture Lock: Yes."); return; }
   perimeter.push({ id:`PER-${String(perimeter.length+1).padStart(3,'0')}`, point_no: perimeter.length+1, lat:lastPos.lat, lng:lastPos.lng, accuracy:lastPos.accuracy, timestamp:Date.now() });
   renderAll();
   setPerm(`Perimeter point ${perimeter.length} hard locked.`);
   fitFieldMap();
 }
-function clearPerimeter(){
-  if(!confirm("Delete all perimeter points?")) return;
-  perimeter = [];
-  renderAll();
-  setPerm("Perimeter cleared.");
-  fitFieldMap();
-}
+function clearPerimeter(){ if(!confirm("Delete all perimeter points?")) return; perimeter = []; renderAll(); setPerm("Perimeter cleared."); fitFieldMap(); }
 
-function buildBackup(){ return { app: "LinerSync Repair Points", version: 8, exported_at: new Date().toISOString(), points, perimeter }; }
+function buildBackup(){ return { app: "LinerSync Repair Points", version: 9, exported_at: new Date().toISOString(), points, perimeter }; }
 function downloadFile(name, content, type){ const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 function backupNow(){ const stamp = new Date().toISOString().replace(/[:.]/g, "-"); downloadFile(`linersync-backup-${stamp}.json`, JSON.stringify(buildBackup(), null, 2), "application/json"); setBackupStatus("JSON saved"); setPerm("Backup file downloaded to your phone. Use Restore Backup to pick it later."); }
-
 function restoreFromFile(file){
   const reader = new FileReader();
   reader.onload = () => {
@@ -335,6 +357,7 @@ document.getElementById("startTaskBtn").addEventListener("click", startTask);
 document.getElementById("endTaskBtn").addEventListener("click", endTask);
 document.getElementById("lockPerimeterBtn").addEventListener("click", hardLockPerimeter);
 document.getElementById("clearPerimeterBtn").addEventListener("click", clearPerimeter);
+document.getElementById("clearLastRepairBtn").addEventListener("click", clearLastRepair);
 document.getElementById("backupBtn").addEventListener("click", backupNow);
 document.getElementById("restoreBtn").addEventListener("click", ()=>document.getElementById("restoreInput").click());
 document.getElementById("restoreInput").addEventListener("change", (e)=>{ if(e.target.files && e.target.files[0]) restoreFromFile(e.target.files[0]); e.target.value = ""; });
@@ -345,7 +368,6 @@ document.getElementById("fitBtn").addEventListener("click", fitFieldMap);
 document.getElementById("csvBtn").addEventListener("click", downloadCSV);
 document.getElementById("geojsonBtn").addEventListener("click", downloadGeoJSON);
 document.getElementById("kmlBtn").addEventListener("click", downloadKML);
-document.getElementById("clearBtn").addEventListener("click", clearPoints);
 
 initMap();
 startGps();
