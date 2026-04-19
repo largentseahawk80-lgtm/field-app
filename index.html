@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>LinerSync Field App</title>
   <meta name="theme-color" content="#0b1220" />
   <style>
@@ -11,10 +11,10 @@
       --green:#22c55e; --blue:#38bdf8; --red:#ef4444; --line:#29406f; --gold:#facc15; --purple:#c084fc; --teal:#2dd4bf; --orange:#fb923c;
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;touch-action:none}
     .app{display:grid;grid-template-rows:1fr auto;height:100dvh}
     .mapWrap{position:relative;min-height:0}
-    #map{position:absolute;inset:0;height:100%;width:100%}
+    #map{position:absolute;inset:0;height:100%;width:100%;touch-action:pan-x pan-y pinch-zoom}
     .overlayTop{position:absolute;top:10px;left:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
     .overlayTop > *{pointer-events:auto}
     .titleBar,.statusBar,.toolbar,.chipRow,.panel,.advisoryBar{background:rgba(15,24,48,.92);border:1px solid var(--line);backdrop-filter:blur(8px);border-radius:18px}
@@ -204,7 +204,7 @@ function redrawPerimeter(){ perimeterLayer.clearLayers(); perimeter.forEach((p,i
 function renderAll(){ markersLayer.clearLayers(); redrawRepairTrail(); redrawPerimeter(); points.forEach((p,i)=>{ const marker=L.circleMarker([p.lat,p.lng], {radius:7,color:'#0b1220',weight:1,fillColor:markerColor(p.repair_type||"Bead"),fillOpacity:0.95}).addTo(markersLayer); marker.bindPopup(repairPopupHtml(p));}); saveAll(); }
 function setGps(text, ok=true){ const el=document.getElementById("gpsPill"); el.textContent=`GPS: ${text}`; el.style.borderColor=ok?"#29406f":"#6b1f1f"; }
 function setPerm(text){ document.getElementById("perm").textContent=text; }
-function initMap(){ map=L.map('map',{zoomControl:true}); perimeterLayer=L.layerGroup().addTo(map); trailLayer=L.layerGroup().addTo(map); markersLayer=L.layerGroup().addTo(map); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22, attribution:'&copy; OpenStreetMap contributors'}).addTo(map); renderAll(); updateTaskUI(); updateTypeUI(); updateGpsMeter(); setBackupStatus("Local only"); if(points.length||perimeter.length){ setPerm(`Recovered ${points.length} repairs and ${perimeter.length} perimeter points.`); fitFieldMap(); } else { map.setView([33.3943,-104.5230],5); } }
+function initMap(){ map=L.map('map',{zoomControl:true,touchZoom:true,doubleClickZoom:false,boxZoom:false,keyboard:false,tap:false}); perimeterLayer=L.layerGroup().addTo(map); trailLayer=L.layerGroup().addTo(map); markersLayer=L.layerGroup().addTo(map); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22, attribution:'&copy; OpenStreetMap contributors'}).addTo(map); renderAll(); updateTaskUI(); updateTypeUI(); updateGpsMeter(); setBackupStatus("Local only"); if(points.length||perimeter.length){ setPerm(`Recovered ${points.length} repairs and ${perimeter.length} perimeter points.`); fitFieldMap(); } else { map.setView([33.3943,-104.5230],5); } }
 function drawCurrentPosition(){ if(!lastPos) return; const latlng=[lastPos.lat,lastPos.lng]; if(currentMarker) currentMarker.setLatLng(latlng); else { currentMarker=L.circleMarker(latlng,{radius:9,color:'#ffffff',weight:2,fillColor:'#38bdf8',fillOpacity:1}).addTo(map); currentMarker.bindPopup('Current GPS location'); } if(accuracyCircle){ accuracyCircle.setLatLng(latlng); accuracyCircle.setRadius(Math.max(1,lastPos.accuracy||1)); } else { accuracyCircle=L.circle(latlng,{radius:Math.max(1,lastPos.accuracy||1),color:'#38bdf8',weight:1,fillColor:'#38bdf8',fillOpacity:0.12}).addTo(map); } }
 function updateLivePosition(position){ const {latitude,longitude,accuracy}=position.coords; lastPos={lat:latitude,lng:longitude,accuracy,timestamp:Date.now()}; posHistory.push({lat:latitude,lng:longitude,timestamp:Date.now()}); posHistory = posHistory.filter(p => Date.now() - p.timestamp <= 5000); setGps(`${Math.round(accuracy)}m`,true); updateGpsMeter(); if(taskActive) setPerm(`Task running: ${repairType} | Map always visible`); else setPerm("Field map shows current GPS, perimeter, and saved captures"); drawCurrentPosition(); }
 function startGps(){ if(!("geolocation" in navigator)){ setGps("Not supported",false); setPerm("This phone/browser does not support GPS"); updateGpsMeter(); return; } navigator.geolocation.getCurrentPosition(pos=>{ updateLivePosition(pos); if(!points.length&&!perimeter.length) map.setView([pos.coords.latitude,pos.coords.longitude],19);}, err=>{ setGps("Error",false); setPerm("Allow location permission in Chrome and reload"); updateGpsMeter(); console.error(err);},{enableHighAccuracy:true,timeout:15000,maximumAge:0}); if(gpsWatchId!==null){ try{ navigator.geolocation.clearWatch(gpsWatchId); }catch(e){} } gpsWatchId=navigator.geolocation.watchPosition(updateLivePosition, err=>{ setGps("Error",false); updateGpsMeter(); console.error(err); }, {enableHighAccuracy:true,timeout:15000,maximumAge:1000}); }
