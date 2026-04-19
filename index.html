@@ -713,13 +713,6 @@ window.deletePerimeterById = function(id){
 
 function redrawRepairTrail(){
   trailLayer.clearLayers();
-  if(points.length >= 2){
-    L.polyline(points.map(p => [p.lat, p.lng]), {
-      color:"#38bdf8",
-      weight:3,
-      opacity:0.85
-    }).addTo(trailLayer);
-  }
 }
 
 function redrawPerimeter(){
