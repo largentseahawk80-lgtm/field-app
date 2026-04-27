@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>LinerSync Field Ready</title>
+<title>LinerSync Field Ready + Mythos</title>
 <meta name="theme-color" content="#ffffff">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 :root{
   --bg:#ffffff;
@@ -19,59 +19,89 @@
   --green:#1f9d55;
   --amber:#d97706;
   --red:#c62828;
+  --softRed:#fff1f2;
+  --softAmber:#fff7ed;
   --shadow:0 4px 16px rgba(25,118,210,.16);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+body{overscroll-behavior:none}
 .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
 .top{padding:10px;background:#fff;border-bottom:2px solid var(--line)}
-.title{font-size:24px;font-weight:900;text-align:center;color:var(--blue2);margin:0 0 8px}
+.title{font-size:23px;font-weight:900;text-align:center;color:var(--blue2);margin:0 0 8px}
+.subTitle{font-size:12px;text-align:center;color:var(--muted);font-weight:800;margin-top:-4px;margin-bottom:8px}
 .row{display:grid;grid-template-columns:1fr auto;gap:8px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-input,select,button{
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+input,select,button,textarea{
   width:100%;
   border-radius:16px;
   border:2px solid var(--line);
-  min-height:54px;
-  font-size:17px;
+  min-height:52px;
+  font-size:16px;
   font-weight:800;
 }
-input,select{padding:12px;background:#fff;color:var(--text)}
-button{padding:10px 12px}
+input,select,textarea{padding:12px;background:#fff;color:var(--text)}
+textarea{min-height:76px;resize:vertical;font-family:inherit}
+button{padding:10px 12px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
 .primary{background:var(--blue);color:#fff}
 .secondary{background:#fff;color:var(--blue2)}
 .good{background:var(--green);color:#fff;border-color:#9de2bf}
 .warn{background:#fff7ed;color:#9a3412;border-color:#fdba74}
 .danger{background:#fff1f2;color:var(--red);border-color:#fda4af}
-.tabbar{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--panel);border-bottom:2px solid var(--line);padding:8px;gap:8px}
-.tab{background:#fff;color:var(--blue2)}
+.dark{background:var(--blue2);color:#fff}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);border-bottom:2px solid var(--line);padding:8px;gap:6px}
+.tab{background:#fff;color:var(--blue2);font-size:13px;min-height:46px;border-radius:14px}
 .tab.active{background:var(--blue);color:#fff}
-.panel{padding:8px;background:#fff}
-.card{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:10px;box-shadow:var(--shadow)}
+.panel{padding:8px;background:#fff;overflow:auto}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+.cardTitle{font-weight:900;color:var(--blue2);font-size:17px;margin-bottom:8px}
 .status{font-size:14px;color:var(--muted);line-height:1.35;margin-top:8px}
-.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.badge{padding:8px 12px;border-radius:999px;background:#fff;border:2px solid var(--line);font-size:13px;font-weight:900;color:var(--blue2)}
-.view{position:relative}
-#map{height:100%;width:100%;min-height:320px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:7px 10px;border-radius:999px;background:#fff;border:2px solid var(--line);font-size:12px;font-weight:900;color:var(--blue2)}
+.badge.red{background:var(--softRed);color:var(--red);border-color:#fda4af}
+.badge.green{background:#ecfdf5;color:#047857;border-color:#86efac}
+.badge.amber{background:var(--softAmber);color:#9a3412;border-color:#fdba74}
+.view{position:relative;min-height:260px}
+#map{height:100%;width:100%;min-height:260px}
 .legend{
   position:absolute;left:10px;top:10px;z-index:500;
   background:rgba(255,255,255,.94);border:2px solid var(--line);border-radius:16px;
-  padding:10px 12px;box-shadow:var(--shadow);max-width:75%
+  padding:10px 12px;box-shadow:var(--shadow);max-width:78%
 }
-.small{font-size:12px;color:var(--muted)}
+.small{font-size:12px;color:var(--muted);font-weight:700}
 .bottom{padding:10px;background:#fff;border-top:2px solid var(--line)}
-.hidden{display:none}
+.hidden{display:none!important}
 .list{display:grid;gap:8px}
 .item{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px}
 .itemTitle{font-weight:900;color:var(--blue2)}
-.footerBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.itemMeta{font-size:12px;color:var(--muted);line-height:1.4;margin-top:4px}
+.warnBox{background:var(--softAmber);border:2px solid #fdba74;border-radius:14px;padding:10px;color:#9a3412;font-weight:800;margin-top:8px}
+.redBox{background:var(--softRed);border:2px solid #fda4af;border-radius:14px;padding:10px;color:var(--red);font-weight:800;margin-top:8px}
+.okBox{background:#ecfdf5;border:2px solid #86efac;border-radius:14px;padding:10px;color:#047857;font-weight:800;margin-top:8px}
+.gridFields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fileBtn{display:block;border:2px dashed var(--line);border-radius:16px;padding:12px;background:#fff;color:var(--blue2);font-weight:900;text-align:center}
+input[type=file]{display:none}
+.photoPreview{width:100%;max-height:170px;object-fit:cover;border-radius:14px;border:2px solid var(--line);margin-top:8px}
+.kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.kpi div{background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px;text-align:center}
+.kpi b{display:block;color:var(--blue2);font-size:20px}
+.kpi span{font-size:11px;color:var(--muted);font-weight:900}
+@media(max-width:420px){
+  .title{font-size:21px}
+  .tab{font-size:12px;padding:8px 4px}
+  .gridFields,.row2{grid-template-columns:1fr}
+  .row3,.row4{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="top">
     <div class="title">LinerSync Field Ready</div>
+    <div class="subTitle">MYTHOS WORKFLOW ENGINE V1</div>
     <div class="row">
       <select id="projectSelect"></select>
       <button id="gpsBtn" class="secondary">GPS</button>
@@ -80,76 +110,166 @@ button{padding:10px 12px}
       <input id="projectName" placeholder="New project name">
       <button id="saveProjectBtn" class="primary">Project</button>
     </div>
-    <div class="badges">
-      <div class="badge" id="projectBadge">Project: none</div>
-      <div class="badge" id="gpsBadge">GPS: waiting</div>
-      <div class="badge" id="stepBadge">Step: perimeter</div>
-    </div>
-    <div class="status" id="statusText">Choose project. Capture perimeter first. Then capture repairs.</div>
+    <div class="badges" id="memoryBadges"></div>
+    <div class="status" id="statusText">Mythos ready. Choose or create a project.</div>
   </div>
 
   <div class="tabbar">
-    <button class="tab active" id="tabPerimeter">Perimeter</button>
-    <button class="tab" id="tabRepairs">Repairs</button>
-    <button class="tab" id="tabEdit">Edit</button>
+    <button class="tab active" id="tabHome">Home</button>
+    <button class="tab" id="tabSetup">Setup</button>
+    <button class="tab" id="tabCapture">Capture</button>
+    <button class="tab" id="tabLogs">Logs</button>
+    <button class="tab" id="tabExport">Export</button>
   </div>
 
-  <div class="panel" id="panelPerimeter">
+  <div class="panel" id="panelHome">
     <div class="card">
+      <div class="cardTitle">Mythos Memory Bar</div>
+      <div class="kpi">
+        <div><b id="kpiRepairs">0</b><span>Repairs</span></div>
+        <div><b id="kpiPanels">0</b><span>Panels</span></div>
+        <div><b id="kpiTests">0</b><span>Tests</span></div>
+      </div>
+      <div id="continueBox" class="okBox hidden"></div>
+      <div class="badges" id="homeBadges"></div>
+      <div class="status">Mythos carries forward roll, panel, seam, cell, liner, crew, operator, equipment, weather, GPS and time until you change them.</div>
+    </div>
+    <div class="card">
+      <div class="cardTitle">Fast Field Buttons</div>
+      <div class="row2">
+        <button class="primary" data-fast="Repair">Repair</button>
+        <button class="primary" data-fast="Panel">Panel</button>
+        <button class="primary" data-fast="Seam">Seam</button>
+        <button class="primary" data-fast="Wedge Test">Wedge</button>
+        <button class="primary" data-fast="Extrusion Test">Extrusion</button>
+        <button class="primary" data-fast="Air Test">Air Test</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cardTitle">Last Logs</div>
+      <div class="list" id="lastLogsHome"></div>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="panelSetup">
+    <div class="card">
+      <div class="cardTitle">Constant Job Data</div>
+      <div class="gridFields">
+        <input id="constCell" placeholder="Pond / Cell / Lagoon">
+        <input id="constCrew" placeholder="Crew">
+        <input id="constWeather" placeholder="Weather">
+        <input id="constLinerType" placeholder="Liner type">
+        <input id="constLinerThickness" placeholder="Liner thickness">
+        <input id="constRoll" placeholder="Active roll number">
+        <input id="constPanel" placeholder="Active panel number">
+        <input id="constSeam" placeholder="Active seam number">
+        <input id="constOperator" placeholder="Operator / welder">
+        <input id="constEquipment" placeholder="Equipment / machine">
+      </div>
+      <div class="row2" style="margin-top:8px">
+        <button id="saveConstantsBtn" class="good">Save Constants</button>
+        <button id="clearConstantsBtn" class="warn">Clear Constants</button>
+      </div>
+      <div class="status">These fields auto-fill every new log until changed.</div>
+    </div>
+
+    <div class="card">
+      <div class="cardTitle">Perimeter / Site Boundary</div>
       <div class="row3">
         <button id="capturePerimeterBtn" class="primary">Capture Perimeter</button>
         <button id="lockPerimeterBtn" class="good">Lock Perimeter</button>
         <button id="undoPerimeterBtn" class="warn">Undo</button>
       </div>
-      <div class="status">Walk the perimeter and tap capture at each change point. Lock it when finished.</div>
+      <div class="status">Walk the perimeter and tap each corner/change point. Repairs can be logged without a locked perimeter, but distance calculations need one.</div>
     </div>
   </div>
 
-  <div class="panel hidden" id="panelRepairs">
+  <div class="panel hidden" id="panelCapture">
     <div class="card">
-      <div class="row2">
-        <select id="repairType">
-          <option value="Patch">Patch</option>
-          <option value="Burn Out">Burn Out</option>
+      <div class="cardTitle">Smart Log Capture</div>
+      <div class="gridFields">
+        <select id="logType">
+          <option>Repair</option>
+          <option>Panel</option>
+          <option>Seam</option>
+          <option>Roll Use</option>
+          <option>Wedge Test</option>
+          <option>Extrusion Test</option>
+          <option>Air Test</option>
+          <option>Destructive Test</option>
         </select>
-        <button id="captureRepairBtn" class="primary">Capture Repair</button>
+        <input id="logNumber" placeholder="Auto number">
+        <select id="repairType">
+          <option value="">Repair type if repair</option>
+          <option>Patch</option>
+          <option>Bead</option>
+          <option>Burn Out</option>
+          <option>Wrinkle Cutout</option>
+          <option>Fishmouth</option>
+        </select>
+        <select id="testResult">
+          <option value="">Test result if test</option>
+          <option>Pass</option>
+          <option>Fail</option>
+          <option>Retest Needed</option>
+        </select>
+        <input id="durationMin" type="number" min="0" step="0.1" placeholder="Duration minutes">
+        <input id="spacingFt" type="number" min="0" step="1" placeholder="DT spacing feet">
+        <input id="panelLength" type="number" min="0" step="1" placeholder="Panel/seam length feet">
+        <input id="orientation" placeholder="Orientation / slope">
       </div>
+      <textarea id="note" placeholder="Notes"></textarea>
+      <label class="fileBtn" for="photoInput">Attach Photo</label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment">
+      <img id="photoPreview" class="photoPreview hidden" alt="photo preview">
+      <div id="warningBox" class="hidden"></div>
       <div class="row2" style="margin-top:8px">
-        <input id="repairNote" placeholder="Optional note">
-        <button id="undoRepairBtn" class="warn">Undo Repair</button>
+        <button id="saveLogBtn" class="primary">Save Log</button>
+        <button id="overrideSaveBtn" class="warn hidden">Save With Override</button>
       </div>
-      <div class="status">Repairs stay tied to the active project. Two kinds included: Patch and Burn Out.</div>
+      <div class="status">Mythos checks the log before saving. Warnings do not block you; overrides are recorded.</div>
     </div>
   </div>
 
-  <div class="panel hidden" id="panelEdit">
+  <div class="panel hidden" id="panelLogs">
     <div class="card">
+      <div class="cardTitle">Last Logs Dashboard</div>
+      <div class="row2">
+        <button id="sortNewestBtn" class="secondary">Newest First</button>
+        <button id="undoLastLogBtn" class="warn">Undo Last Log</button>
+      </div>
+      <div class="list" id="allLogsList" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="panelExport">
+    <div class="card">
+      <div class="cardTitle">Export / Backup</div>
       <div class="row2">
         <button id="downloadCsvBtn" class="secondary">Download CSV</button>
         <button id="downloadJsonBtn" class="secondary">Download JSON</button>
+        <button id="downloadKmlBtn" class="secondary">Download KML</button>
+        <button id="downloadReportBtn" class="secondary">Daily Report</button>
       </div>
       <div class="row2" style="margin-top:8px">
-        <button id="clearRepairsBtn" class="danger">Clear Repairs</button>
+        <button id="clearLogsBtn" class="danger">Clear Logs</button>
         <button id="clearProjectBtn" class="danger">Clear Project</button>
       </div>
-      <div class="status">Edit area for cleanup and exports. Perimeter and repairs are separated in the saved data.</div>
+      <div id="exportWarnings" class="status"></div>
     </div>
   </div>
 
   <div class="view">
     <div id="map"></div>
     <div class="legend">
-      <div><b>Field workflow</b></div>
-      <div class="small">1. Choose project</div>
-      <div class="small">2. Capture perimeter</div>
-      <div class="small">3. Lock perimeter</div>
-      <div class="small">4. Capture repairs</div>
-      <div class="small" id="countsText">Perimeter: 0 | Repairs: 0</div>
+      <div><b>Mythos Map</b></div>
+      <div class="small" id="countsText">Perimeter: 0 | Logs: 0</div>
+      <div class="small" id="activeText">Active: none</div>
     </div>
   </div>
 
   <div class="bottom">
-    <div class="footerBtns">
+    <div class="row2">
       <button id="recenterBtn" class="secondary">Center GPS</button>
       <button id="renameBtn" class="secondary">Rename Project</button>
     </div>
@@ -158,43 +278,105 @@ button{padding:10px 12px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-const STORAGE_KEY = "linersync-field-ready-v1";
-const SETTINGS_KEY = "linersync-field-ready-settings-v1";
+const STORAGE_KEY = "linersync-mythos-workflow-v1";
+const OLD_STORAGE_KEY = "linersync-field-ready-v1";
+const SETTINGS_KEY = "linersync-mythos-settings-v1";
 
 let state = loadState();
 let settings = loadSettings();
 let currentProjectId = settings.currentProjectId || (state.projects[0] ? state.projects[0].id : null);
-let currentTab = "perimeter";
+let currentTab = settings.currentTab || "home";
 let gps = null;
-let map, gpsMarker, perimeterLayer, repairLayer;
+let map, gpsMarker, perimeterLayer, logLayer;
+let stagedPhoto = "";
 
+const TYPE_PREFIX = {
+  "Repair":"R",
+  "Panel":"P",
+  "Seam":"S",
+  "Roll Use":"ROLL",
+  "Wedge Test":"WW",
+  "Extrusion Test":"EX",
+  "Air Test":"AT",
+  "Destructive Test":"DT"
+};
+
+function id(x){return document.getElementById(x);}
+function uid(){return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);}
+function cap(s){return s.charAt(0).toUpperCase() + s.slice(1);}
+function pad3(n){return String(n).padStart(3,"0");}
+function nowIso(){return new Date().toISOString();}
+function formatTime(ts){return new Date(ts).toLocaleString([], {year:"numeric",month:"2-digit",day:"2-digit",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true});}
+function safeName(v){return String(v || "project").replace(/[^a-z0-9-_]+/gi, "-").replace(/-+/g, "-");}
+function project(){return state.projects.find(p => p.id === currentProjectId) || null;}
+function setStatus(msg){id("statusText").textContent = msg;}
+
+function defaultConstants(){
+  return {cell:"",crew:"",weather:"",linerType:"",linerThickness:"",roll:"",panel:"",seam:"",operator:"",equipment:""};
+}
+function newProject(name){
+  return {
+    id:uid(),
+    name:name || "Default Project",
+    createdAt:nowIso(),
+    updatedAt:nowIso(),
+    perimeterLocked:false,
+    perimeterPoints:[],
+    logs:[],
+    counters:{},
+    constants:defaultConstants(),
+    lastActive:{roll:"",panel:"",seam:"",cell:""}
+  };
+}
 function loadState(){
   try{
     const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "");
     if(s && Array.isArray(s.projects)) return s;
   }catch(e){}
-  const starter = {
-    projects: [{
-      id: crypto.randomUUID(),
-      name: "Default Project",
-      perimeterLocked: false,
-      perimeterPoints: [],
-      repairs: []
-    }]
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(starter));
-  return starter;
+  try{
+    const old = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY) || "");
+    if(old && Array.isArray(old.projects)){
+      return {projects: old.projects.map(op => ({
+        id:op.id || uid(),
+        name:op.name || "Imported Project",
+        createdAt:nowIso(),
+        updatedAt:nowIso(),
+        perimeterLocked:!!op.perimeterLocked,
+        perimeterPoints:op.perimeterPoints || [],
+        logs:(op.repairs || []).map((r,i)=>({
+          id:r.id || uid(), type:"Repair", number:"R-"+pad3(i+1), repairType:r.repairType || "Patch",
+          note:r.note || "", result:"", durationMin:"", spacingFt:"", panelLength:"",
+          orientation:"", constants:defaultConstants(), lat:r.lat, lng:r.lng, accuracy:r.accuracy,
+          timestamp:r.timestamp || Date.now(), warnings:[], override:false, photo:""
+        })),
+        counters:{Repair:(op.repairs || []).length},
+        constants:defaultConstants(),
+        lastActive:{roll:"",panel:"",seam:"",cell:""}
+      }))};
+    }
+  }catch(e){}
+  return {projects:[newProject("Default Project")]};
 }
 function loadSettings(){
   try{return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {};}catch(e){return {};}
 }
 function saveAll(){
+  const p = project();
+  if(p) p.updatedAt = nowIso();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify({currentProjectId, currentTab}));
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({currentProjectId,currentTab}));
 }
-function id(x){return document.getElementById(x);}
-function setStatus(msg){id("statusText").textContent = msg;}
-function project(){return state.projects.find(p => p.id === currentProjectId) || null;}
+function nextNumber(type){
+  const p = project();
+  if(!p) return "";
+  p.counters[type] = p.counters[type] || 0;
+  const prefix = TYPE_PREFIX[type] || "LOG";
+  return prefix + "-" + pad3(p.counters[type] + 1);
+}
+function commitCounter(type){
+  const p = project();
+  p.counters[type] = (p.counters[type] || 0) + 1;
+}
 
 function refreshProjects(){
   const sel = id("projectSelect");
@@ -208,27 +390,104 @@ function refreshProjects(){
   });
   updateUi();
 }
+
 function updateUi(){
   const p = project();
-  id("projectBadge").textContent = "Project: " + (p ? p.name : "none");
-  id("stepBadge").textContent = "Step: " + (p && p.perimeterLocked ? "repairs" : "perimeter");
-  if(p){
-    id("countsText").textContent = "Perimeter: " + p.perimeterPoints.length + " | Repairs: " + p.repairs.length;
-  }
-  id("tabRepairs").disabled = !(p && p.perimeterLocked);
-  if(p && !p.perimeterLocked && currentTab === "repairs"){ currentTab = "perimeter"; }
+  const c = p ? p.constants : defaultConstants();
+
+  id("kpiRepairs").textContent = p ? p.logs.filter(x=>x.type==="Repair").length : 0;
+  id("kpiPanels").textContent = p ? p.logs.filter(x=>x.type==="Panel").length : 0;
+  id("kpiTests").textContent = p ? p.logs.filter(x=>x.type.includes("Test")).length : 0;
+
+  id("countsText").textContent = p ? ("Perimeter: " + p.perimeterPoints.length + " | Logs: " + p.logs.length) : "Perimeter: 0 | Logs: 0";
+  id("activeText").textContent = p ? ("Roll " + (c.roll||"blank") + " | Panel " + (c.panel||"blank") + " | Seam " + (c.seam||"blank")) : "Active: none";
+
+  renderBadges("memoryBadges");
+  renderBadges("homeBadges");
+  renderLastLogs();
+  renderAllLogs();
+  renderExportWarnings();
+  fillConstantsIfNeeded();
+  updateAutoNumber();
   showTab(currentTab);
   renderMap();
   saveAll();
 }
+
+function renderBadges(target){
+  const p = project();
+  const box = id(target);
+  box.innerHTML = "";
+  if(!p){
+    box.appendChild(badge("Project: none","red"));
+    return;
+  }
+  const c = p.constants;
+  const gpsClass = gps ? (gps.accuracy <= 10 ? "green" : gps.accuracy <= 30 ? "amber" : "red") : "red";
+  [
+    ["Project: " + p.name, ""],
+    ["Cell: " + (c.cell || "blank"), c.cell ? "" : "amber"],
+    ["Roll: " + (c.roll || "blank"), c.roll ? "" : "amber"],
+    ["Panel: " + (c.panel || "blank"), c.panel ? "" : "amber"],
+    ["Seam: " + (c.seam || "blank"), c.seam ? "" : "amber"],
+    ["GPS: " + (gps ? Math.round(gps.accuracy)+"m" : "waiting"), gpsClass]
+  ].forEach(x => box.appendChild(badge(x[0],x[1])));
+}
+function badge(text, cls){
+  const d = document.createElement("div");
+  d.className = "badge" + (cls ? " " + cls : "");
+  d.textContent = text;
+  return d;
+}
+
 function showTab(name){
   currentTab = name;
-  ["perimeter","repairs","edit"].forEach(t => {
+  ["home","setup","capture","logs","export"].forEach(t => {
     id("panel" + cap(t)).classList.toggle("hidden", t !== name);
     id("tab" + cap(t)).classList.toggle("active", t === name);
   });
 }
-function cap(s){return s.charAt(0).toUpperCase() + s.slice(1);}
+
+function fillConstantsIfNeeded(){
+  const p = project();
+  if(!p) return;
+  const c = p.constants;
+  const map = {
+    constCell:"cell", constCrew:"crew", constWeather:"weather", constLinerType:"linerType",
+    constLinerThickness:"linerThickness", constRoll:"roll", constPanel:"panel",
+    constSeam:"seam", constOperator:"operator", constEquipment:"equipment"
+  };
+  Object.keys(map).forEach(el => {
+    if(document.activeElement !== id(el)) id(el).value = c[map[el]] || "";
+  });
+}
+
+function saveConstants(){
+  const p = project();
+  if(!p){ alert("Choose project first."); return; }
+  const c = p.constants;
+  c.cell = id("constCell").value.trim();
+  c.crew = id("constCrew").value.trim();
+  c.weather = id("constWeather").value.trim();
+  c.linerType = id("constLinerType").value.trim();
+  c.linerThickness = id("constLinerThickness").value.trim();
+  c.roll = id("constRoll").value.trim();
+  c.panel = id("constPanel").value.trim();
+  c.seam = id("constSeam").value.trim();
+  c.operator = id("constOperator").value.trim();
+  c.equipment = id("constEquipment").value.trim();
+  p.lastActive = {roll:c.roll,panel:c.panel,seam:c.seam,cell:c.cell};
+  setStatus("Mythos constants saved. New logs will auto-fill.");
+  updateUi();
+}
+function clearConstants(){
+  const p = project();
+  if(!p) return;
+  if(!confirm("Clear constant job data?")) return;
+  p.constants = defaultConstants();
+  setStatus("Constants cleared.");
+  updateUi();
+}
 
 function createOrSelectProject(){
   const name = (id("projectName").value || "").trim();
@@ -242,16 +501,16 @@ function createOrSelectProject(){
   if(existing){
     currentProjectId = existing.id;
     id("projectName").value = "";
-    setStatus("Existing project selected.");
+    setStatus("Existing project selected. Mythos restored last constants.");
     updateUi();
     return;
   }
-  const p = {id: crypto.randomUUID(), name, perimeterLocked:false, perimeterPoints:[], repairs:[]};
+  const p = newProject(name);
   state.projects.push(p);
   currentProjectId = p.id;
   id("projectName").value = "";
-  currentTab = "perimeter";
-  setStatus("New project created. Start perimeter capture.");
+  currentTab = "setup";
+  setStatus("New project created. Add constants or capture perimeter.");
   refreshProjects();
 }
 function renameProject(){
@@ -264,6 +523,17 @@ function renameProject(){
   setStatus("Project renamed.");
   refreshProjects();
 }
+
+function makePoint(extra){
+  return Object.assign({
+    id:uid(),
+    lat:gps ? gps.lat : "",
+    lng:gps ? gps.lng : "",
+    accuracy:gps ? gps.accuracy : "",
+    timestamp:Date.now()
+  }, extra || {});
+}
+
 function capturePerimeter(){
   const p = project();
   if(!p){ alert("Choose project first."); return; }
@@ -278,79 +548,219 @@ function lockPerimeter(){
   if(!p){ alert("Choose project first."); return; }
   if(p.perimeterPoints.length < 3){ alert("Need at least 3 perimeter points."); return; }
   p.perimeterLocked = true;
-  currentTab = "repairs";
-  setStatus("Perimeter locked. Repairs are active now.");
+  setStatus("Perimeter locked. Mythos can calculate site context later.");
   updateUi();
 }
 function undoPerimeter(){
   const p = project();
-  if(!p){ return; }
+  if(!p) return;
   p.perimeterPoints.pop();
   if(p.perimeterPoints.length < 3) p.perimeterLocked = false;
   setStatus("Last perimeter point removed.");
   updateUi();
 }
-function captureRepair(){
+
+function updateAutoNumber(){
+  const type = id("logType").value;
+  if(!id("logNumber").value || id("logNumber").dataset.auto === "true"){
+    id("logNumber").value = nextNumber(type);
+    id("logNumber").dataset.auto = "true";
+  }
+  const isRepair = type === "Repair";
+  const isTest = type.includes("Test");
+  id("repairType").disabled = !isRepair;
+  id("testResult").disabled = !isTest;
+  id("durationMin").disabled = !(type === "Air Test");
+  id("spacingFt").disabled = !(type === "Destructive Test");
+}
+function fastStart(type){
+  currentTab = "capture";
+  id("logType").value = type;
+  id("logNumber").dataset.auto = "true";
+  id("logNumber").value = nextNumber(type);
+  clearCaptureFields(false);
+  setStatus("Mythos ready for " + type + ".");
+  updateUi();
+}
+function clearCaptureFields(clearType){
+  if(clearType){
+    id("logType").value = "Repair";
+    id("logNumber").dataset.auto = "true";
+    id("logNumber").value = nextNumber("Repair");
+  }
+  id("repairType").value = "";
+  id("testResult").value = "";
+  id("durationMin").value = "";
+  id("spacingFt").value = "";
+  id("panelLength").value = "";
+  id("orientation").value = "";
+  id("note").value = "";
+  stagedPhoto = "";
+  id("photoPreview").src = "";
+  id("photoPreview").classList.add("hidden");
+  id("warningBox").classList.add("hidden");
+  id("overrideSaveBtn").classList.add("hidden");
+}
+
+function validateLog(){
+  const p = project();
+  const type = id("logType").value;
+  const c = p ? p.constants : defaultConstants();
+  const warnings = [];
+  if(!gps) warnings.push("Missing GPS.");
+  else if(Number(gps.accuracy) > 30) warnings.push("GPS accuracy is weak: " + Math.round(gps.accuracy) + "m.");
+  if(!stagedPhoto) warnings.push("No photo attached.");
+  if(!c.cell) warnings.push("Cell / pond / lagoon is blank.");
+  if(!c.roll && ["Panel","Seam","Roll Use","Wedge Test","Extrusion Test","Air Test","Destructive Test"].includes(type)) warnings.push("Active roll number is blank.");
+  if(type === "Repair" && !id("repairType").value) warnings.push("Repair missing bead/patch/type.");
+  if(type === "Panel" && !c.panel && !id("logNumber").value) warnings.push("Panel number is blank.");
+  if(type === "Seam" && !c.seam && !id("logNumber").value) warnings.push("Seam number is blank.");
+  if(type === "Air Test"){
+    const d = Number(id("durationMin").value || 0);
+    if(d < 5) warnings.push("Air test duration is under 5 minutes.");
+    if(!id("testResult").value) warnings.push("Air test missing pass/fail.");
+  }
+  if(type === "Destructive Test"){
+    const s = Number(id("spacingFt").value || 0);
+    if(s > 500) warnings.push("Destructive test spacing is over 500 feet.");
+    if(!id("testResult").value) warnings.push("Destructive test missing pass/fail.");
+  }
+  if(type.includes("Test") && id("testResult").value === "Fail"){
+    warnings.push("Failed test must be marked for repair or retest in notes.");
+  }
+  if(type === "Panel"){
+    const num = id("logNumber").value.trim();
+    if(p && p.logs.some(x => x.type==="Panel" && x.number===num)) warnings.push("Duplicate panel number.");
+  }
+  if(type === "Roll Use"){
+    const roll = c.roll;
+    if(roll && p && p.logs.some(x => x.type==="Roll Use" && x.constants && x.constants.roll===roll)) warnings.push("Roll number already logged before; confirm this is a continued roll.");
+  }
+  return warnings;
+}
+function showWarnings(warnings){
+  const box = id("warningBox");
+  if(!warnings.length){
+    box.className = "okBox";
+    box.innerHTML = "Mythos check passed.";
+    box.classList.remove("hidden");
+    id("overrideSaveBtn").classList.add("hidden");
+    return;
+  }
+  box.className = "redBox";
+  box.innerHTML = "<div>Mythos warnings:</div><ul>" + warnings.map(w => "<li>"+escapeHtml(w)+"</li>").join("") + "</ul>";
+  box.classList.remove("hidden");
+  id("overrideSaveBtn").classList.remove("hidden");
+}
+function saveLog(override){
   const p = project();
   if(!p){ alert("Choose project first."); return; }
-  if(!p.perimeterLocked){ alert("Lock perimeter first."); currentTab = "perimeter"; updateUi(); return; }
-  if(!gps){ alert("GPS not ready."); return; }
-  const repair = makePoint({
-    repairType: id("repairType").value,
-    note: (id("repairNote").value || "").trim()
+  const warnings = validateLog();
+  showWarnings(warnings);
+  if(warnings.length && !override){
+    setStatus("Mythos found warnings. Review or save with override.");
+    return;
+  }
+  const type = id("logType").value;
+  const log = makePoint({
+    type,
+    number:id("logNumber").value.trim() || nextNumber(type),
+    repairType:id("repairType").value,
+    result:id("testResult").value,
+    durationMin:id("durationMin").value,
+    spacingFt:id("spacingFt").value,
+    panelLength:id("panelLength").value,
+    orientation:id("orientation").value.trim(),
+    note:id("note").value.trim(),
+    constants:JSON.parse(JSON.stringify(p.constants)),
+    warnings,
+    override:!!override,
+    photo:stagedPhoto
   });
-  p.repairs.push(repair);
-  id("repairNote").value = "";
-  setStatus(repair.repairType + " repair " + p.repairs.length + " captured.");
+  p.logs.push(log);
+  commitCounter(type);
+
+  if(type === "Panel") p.constants.panel = log.number;
+  if(type === "Seam") p.constants.seam = log.number;
+  p.lastActive = {roll:p.constants.roll,panel:p.constants.panel,seam:p.constants.seam,cell:p.constants.cell};
+
+  setStatus(log.number + " saved" + (override ? " with override." : "."));
+  id("logNumber").dataset.auto = "true";
+  clearCaptureFields(false);
+  id("logNumber").value = nextNumber(type);
   updateUi();
 }
-function undoRepair(){
+function undoLastLog(){
   const p = project();
-  if(!p){ return; }
-  p.repairs.pop();
-  setStatus("Last repair removed.");
+  if(!p || !p.logs.length){ alert("No logs to undo."); return; }
+  const last = p.logs[p.logs.length-1];
+  if(!confirm("Undo last log " + last.number + "?")) return;
+  p.logs.pop();
+  setStatus("Last log removed: " + last.number);
   updateUi();
 }
-function clearRepairs(){
+
+function renderLastLogs(){
   const p = project();
-  if(!p){ return; }
-  if(!confirm("Clear all repairs for this project?")) return;
-  p.repairs = [];
-  setStatus("Repairs cleared.");
-  updateUi();
+  const targets = [id("lastLogsHome")];
+  targets.forEach(box => {
+    box.innerHTML = "";
+    if(!p || !p.logs.length){
+      box.innerHTML = '<div class="item"><div class="itemTitle">No logs yet</div><div class="itemMeta">Capture a repair, panel, seam, roll use, or test.</div></div>';
+      return;
+    }
+    p.logs.slice(-5).reverse().forEach(log => box.appendChild(logItem(log)));
+  });
+  const cont = id("continueBox");
+  if(p && (p.logs.length || p.constants.roll || p.constants.panel || p.constants.seam)){
+    cont.classList.remove("hidden");
+    cont.textContent = "Continue last job: " + p.name + " | Roll " + (p.constants.roll||"blank") + " | Panel " + (p.constants.panel||"blank") + " | Last log " + (p.logs.length ? p.logs[p.logs.length-1].number : "none");
+  }else{
+    cont.classList.add("hidden");
+  }
 }
-function clearProject(){
+function renderAllLogs(){
   const p = project();
-  if(!p){ return; }
-  if(!confirm("Clear perimeter and repairs for this project?")) return;
-  p.perimeterPoints = [];
-  p.repairs = [];
-  p.perimeterLocked = false;
-  currentTab = "perimeter";
-  setStatus("Project cleared.");
-  updateUi();
+  const box = id("allLogsList");
+  box.innerHTML = "";
+  if(!p || !p.logs.length){
+    box.innerHTML = '<div class="item"><div class="itemTitle">No logs saved</div></div>';
+    return;
+  }
+  p.logs.slice().reverse().forEach(log => box.appendChild(logItem(log)));
 }
-function makePoint(extra){
-  return Object.assign({
-    id: crypto.randomUUID(),
-    lat: gps.lat,
-    lng: gps.lng,
-    accuracy: gps.accuracy,
-    timestamp: Date.now()
-  }, extra || {});
+function logItem(log){
+  const d = document.createElement("div");
+  d.className = "item";
+  const warn = log.warnings && log.warnings.length ? " | WARNINGS: " + log.warnings.length : "";
+  const c = log.constants || {};
+  d.innerHTML = '<div class="itemTitle">' + escapeHtml(log.number + " — " + log.type) + '</div>' +
+    '<div class="itemMeta">' + escapeHtml(formatTime(log.timestamp)) + warn + '</div>' +
+    '<div class="itemMeta">' + escapeHtml("Cell: " + (c.cell||"") + " | Roll: " + (c.roll||"") + " | Panel: " + (c.panel||"") + " | Seam: " + (c.seam||"")) + '</div>' +
+    '<div class="itemMeta">' + escapeHtml((log.repairType||log.result||"") + (log.note ? " | " + log.note : "")) + '</div>';
+  return d;
 }
-function formatTime(ts){
-  return new Date(ts).toLocaleString([], {year:"numeric",month:"2-digit",day:"2-digit",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true});
+function renderExportWarnings(){
+  const p = project();
+  const box = id("exportWarnings");
+  if(!p){ box.textContent = "No project."; return; }
+  const warnings = [];
+  if(!p.logs.length) warnings.push("No logs saved.");
+  const missingGps = p.logs.filter(x => !x.lat || !x.lng).length;
+  const missingPhoto = p.logs.filter(x => !x.photo).length;
+  const overridden = p.logs.filter(x => x.override).length;
+  if(missingGps) warnings.push(missingGps + " logs missing GPS.");
+  if(missingPhoto) warnings.push(missingPhoto + " logs missing photos.");
+  if(overridden) warnings.push(overridden + " logs saved with override.");
+  box.textContent = warnings.length ? "Export warnings: " + warnings.join(" ") : "Export check clean.";
 }
-function safeName(v){
-  return String(v || "project").replace(/[^a-z0-9-_]+/gi, "-").replace(/-+/g, "-");
-}
+
 function csvEsc(v){
   const s = String(v == null ? "" : v);
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 function downloadText(filename, content, mime){
-  const blob = new Blob([content], {type: mime});
+  const blob = new Blob([content], {type:mime});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;
@@ -360,127 +770,192 @@ function downloadText(filename, content, mime){
 function downloadCsv(){
   const p = project();
   if(!p){ alert("No project selected."); return; }
-  const rows = [["project","record_type","point_no","repair_type","note","latitude","longitude","accuracy_m","timestamp_iso","local_time"]];
-  p.perimeterPoints.forEach((x,i) => rows.push([p.name,"perimeter",i+1,"","",x.lat,x.lng,Math.round(x.accuracy||0),new Date(x.timestamp).toISOString(),formatTime(x.timestamp)]));
-  p.repairs.forEach((x,i) => rows.push([p.name,"repair",i+1,x.repairType||"",x.note||"",x.lat,x.lng,Math.round(x.accuracy||0),new Date(x.timestamp).toISOString(),formatTime(x.timestamp)]));
-  downloadText(safeName(p.name) + "-field.csv", rows.map(r => r.map(csvEsc).join(",")).join("\n"), "text/csv");
+  const rows = [["project","record_type","number","repair_type","test_result","duration_min","spacing_ft","length_ft","orientation","cell","crew","weather","liner_type","liner_thickness","roll","panel","seam","operator","equipment","note","latitude","longitude","accuracy_m","timestamp_iso","local_time","warnings","override"]];
+  p.perimeterPoints.forEach((x,i) => rows.push([p.name,"perimeter","PER-"+pad3(i+1),"","","","","","","","","","","","","","","","", "",x.lat,x.lng,Math.round(x.accuracy||0),new Date(x.timestamp).toISOString(),formatTime(x.timestamp),"",""]));
+  p.logs.forEach(x => {
+    const c = x.constants || {};
+    rows.push([p.name,x.type,x.number,x.repairType,x.result,x.durationMin,x.spacingFt,x.panelLength,x.orientation,c.cell,c.crew,c.weather,c.linerType,c.linerThickness,c.roll,c.panel,c.seam,c.operator,c.equipment,x.note,x.lat,x.lng,Math.round(x.accuracy||0),new Date(x.timestamp).toISOString(),formatTime(x.timestamp),(x.warnings||[]).join(" | "),x.override?"YES":"NO"]);
+  });
+  downloadText(safeName(p.name) + "-mythos-field.csv", rows.map(r => r.map(csvEsc).join(",")).join("\n"), "text/csv");
 }
 function downloadJson(){
   const p = project();
   if(!p){ alert("No project selected."); return; }
-  downloadText(safeName(p.name) + "-field.json", JSON.stringify(p, null, 2), "application/json");
+  downloadText(safeName(p.name) + "-mythos-backup.json", JSON.stringify(p, null, 2), "application/json");
+}
+function downloadReport(){
+  const p = project();
+  if(!p){ alert("No project selected."); return; }
+  const byType = {};
+  p.logs.forEach(l => byType[l.type] = (byType[l.type] || 0) + 1);
+  const lines = [
+    "LINERSYNC DAILY REPORT",
+    "Project: " + p.name,
+    "Generated: " + formatTime(Date.now()),
+    "",
+    "CONSTANTS",
+    JSON.stringify(p.constants, null, 2),
+    "",
+    "COUNTS"
+  ];
+  Object.keys(byType).forEach(k => lines.push(k + ": " + byType[k]));
+  lines.push("", "LAST LOGS");
+  p.logs.slice(-10).forEach(l => lines.push(l.number + " | " + l.type + " | " + formatTime(l.timestamp) + " | " + (l.note||"")));
+  downloadText(safeName(p.name) + "-daily-report.txt", lines.join("\n"), "text/plain");
+}
+function downloadKml(){
+  const p = project();
+  if(!p){ alert("No project selected."); return; }
+  const placemarks = [];
+  p.perimeterPoints.forEach((pt,i)=>{
+    placemarks.push(kmlPoint("PER-"+pad3(i+1), "Perimeter point", pt.lng, pt.lat));
+  });
+  p.logs.forEach(log=>{
+    if(log.lat && log.lng) placemarks.push(kmlPoint(log.number + " " + log.type, (log.note||"") + " " + ((log.warnings||[]).join(" | ")), log.lng, log.lat));
+  });
+  if(p.perimeterPoints.length >= 3){
+    const coords = p.perimeterPoints.map(pt=>pt.lng + "," + pt.lat + ",0").join(" ");
+    placemarks.push("<Placemark><name>Perimeter</name><Polygon><outerBoundaryIs><LinearRing><coordinates>" + coords + " " + p.perimeterPoints[0].lng + "," + p.perimeterPoints[0].lat + ",0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>");
+  }
+  const kml = '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>' + escapeXml(p.name) + '</name>' + placemarks.join("") + '</Document></kml>';
+  downloadText(safeName(p.name) + "-mythos.kml", kml, "application/vnd.google-earth.kml+xml");
+}
+function kmlPoint(name, desc, lng, lat){
+  return "<Placemark><name>"+escapeXml(name)+"</name><description>"+escapeXml(desc)+"</description><Point><coordinates>"+lng+","+lat+",0</coordinates></Point></Placemark>";
+}
+
+function clearLogs(){
+  const p = project();
+  if(!p) return;
+  if(!confirm("Clear all logs for this project?")) return;
+  p.logs = [];
+  p.counters = {};
+  setStatus("Logs cleared.");
+  updateUi();
+}
+function clearProject(){
+  const p = project();
+  if(!p) return;
+  if(!confirm("Clear perimeter, logs, and constants for this project?")) return;
+  p.perimeterPoints = [];
+  p.logs = [];
+  p.counters = {};
+  p.perimeterLocked = false;
+  p.constants = defaultConstants();
+  setStatus("Project cleared.");
+  updateUi();
 }
 
 function initMap(){
   map = L.map("map", {zoomControl:true});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 22,
-    attribution: "&copy; OpenStreetMap contributors"
+    maxZoom:22,
+    attribution:"&copy; OpenStreetMap contributors"
   }).addTo(map);
   perimeterLayer = L.layerGroup().addTo(map);
-  repairLayer = L.layerGroup().addTo(map);
+  logLayer = L.layerGroup().addTo(map);
   map.setView([33.4484, -112.0740], 18);
 }
 function renderMap(){
   if(!map) return;
   perimeterLayer.clearLayers();
-  repairLayer.clearLayers();
+  logLayer.clearLayers();
 
   if(gps){
     if(!gpsMarker){
-      gpsMarker = L.circleMarker([gps.lat, gps.lng], {
-        radius:9, color:"#1f9d55", fillColor:"#1f9d55", fillOpacity:.28, weight:3
-      }).addTo(map);
-    }else{
-      gpsMarker.setLatLng([gps.lat, gps.lng]);
-    }
+      gpsMarker = L.circleMarker([gps.lat, gps.lng], {radius:9,color:"#1f9d55",fillColor:"#1f9d55",fillOpacity:.28,weight:3}).addTo(map);
+    }else gpsMarker.setLatLng([gps.lat, gps.lng]);
   }
   const p = project();
   if(!p) return;
-
   const perim = p.perimeterPoints.map(x => [x.lat, x.lng]);
-  const reps = p.repairs.map(x => [x.lat, x.lng]);
-
-  perim.forEach((latlng, i) => {
-    L.circleMarker(latlng, {radius:6, color:"#d97706", fillColor:"#f59e0b", fillOpacity:.95, weight:2})
-      .bindPopup("<b>Perimeter " + (i+1) + "</b>")
-      .addTo(perimeterLayer);
+  perim.forEach((latlng,i) => {
+    L.circleMarker(latlng,{radius:6,color:"#d97706",fillColor:"#f59e0b",fillOpacity:.95,weight:2})
+      .bindPopup("<b>Perimeter " + (i+1) + "</b>").addTo(perimeterLayer);
   });
-  if(perim.length >= 2){
-    L.polyline(perim, {color:"#0d47a1", weight:4}).addTo(perimeterLayer);
-  }
-  if(p.perimeterLocked && perim.length >= 3){
-    L.polygon(perim, {color:"#0d47a1", weight:3, fillColor:"#64b5f6", fillOpacity:.16}).addTo(perimeterLayer);
-  }
+  if(perim.length >= 2) L.polyline(perim,{color:"#0d47a1",weight:4}).addTo(perimeterLayer);
+  if(p.perimeterLocked && perim.length >= 3) L.polygon(perim,{color:"#0d47a1",weight:3,fillColor:"#64b5f6",fillOpacity:.16}).addTo(perimeterLayer);
 
-  reps.forEach((latlng, i) => {
-    const repair = p.repairs[i];
-    L.circleMarker(latlng, {
-      radius:6,
-      color: repair.repairType === "Burn Out" ? "#c62828" : "#1976d2",
-      fillColor: repair.repairType === "Burn Out" ? "#ef5350" : "#42a5f5",
-      fillOpacity:.95,
-      weight:2
-    }).bindPopup("<b>Repair " + (i+1) + "</b><br>" + (repair.repairType || "") + (repair.note ? "<br>" + repair.note : ""))
-      .addTo(repairLayer);
+  p.logs.forEach(log => {
+    if(!log.lat || !log.lng) return;
+    const color = log.type === "Repair" ? "#c62828" : log.type.includes("Test") ? "#d97706" : "#1976d2";
+    L.circleMarker([log.lat,log.lng],{radius:7,color,fillColor:color,fillOpacity:.85,weight:2})
+      .bindPopup("<b>"+escapeHtml(log.number)+"</b><br>"+escapeHtml(log.type)+"<br>"+escapeHtml(log.note||""))
+      .addTo(logLayer);
   });
-
-  const all = perim.concat(reps);
-  if(all.length){
-    const bounds = L.latLngBounds(all);
-    if(gps) bounds.extend([gps.lat, gps.lng]);
-    map.fitBounds(bounds.pad(0.18), {maxZoom:20});
-  }else if(gps){
-    map.setView([gps.lat, gps.lng], 19);
-  }
 }
 function centerGps(){
   if(!gps){ alert("GPS not ready."); return; }
-  map.setView([gps.lat, gps.lng], 19);
+  map.setView([gps.lat,gps.lng],19);
 }
 function startGps(){
   if(!navigator.geolocation){
-    id("gpsBadge").textContent = "GPS: unsupported";
     setStatus("This browser does not support location.");
     return;
   }
   navigator.geolocation.watchPosition(pos => {
-    gps = {lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy};
-    id("gpsBadge").textContent = "GPS: " + Math.round(gps.accuracy) + "m";
+    gps = {lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy};
     renderMap();
+    renderBadges("memoryBadges");
+    renderBadges("homeBadges");
   }, err => {
-    id("gpsBadge").textContent = "GPS: error";
     setStatus("Location blocked or unavailable. Open in Chrome and allow location.");
     console.log(err);
-  }, {enableHighAccuracy:true, maximumAge:1000, timeout:15000});
+  }, {enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+}
+
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function escapeXml(s){
+  return escapeHtml(s);
 }
 
 id("saveProjectBtn").onclick = createOrSelectProject;
 id("renameBtn").onclick = renameProject;
-id("projectSelect").onchange = e => { currentProjectId = e.target.value; setStatus("Project changed."); updateUi(); };
+id("projectSelect").onchange = e => { currentProjectId = e.target.value; setStatus("Project changed. Mythos restored saved state."); updateUi(); };
 id("gpsBtn").onclick = centerGps;
+id("recenterBtn").onclick = centerGps;
 
-id("tabPerimeter").onclick = () => showTab("perimeter");
-id("tabRepairs").onclick = () => { if(project() && project().perimeterLocked) showTab("repairs"); };
-id("tabEdit").onclick = () => showTab("edit");
+["home","setup","capture","logs","export"].forEach(t => id("tab"+cap(t)).onclick = () => { showTab(t); saveAll(); });
 
+id("saveConstantsBtn").onclick = saveConstants;
+id("clearConstantsBtn").onclick = clearConstants;
 id("capturePerimeterBtn").onclick = capturePerimeter;
 id("lockPerimeterBtn").onclick = lockPerimeter;
 id("undoPerimeterBtn").onclick = undoPerimeter;
 
-id("captureRepairBtn").onclick = captureRepair;
-id("undoRepairBtn").onclick = undoRepair;
-
-id("clearRepairsBtn").onclick = clearRepairs;
-id("clearProjectBtn").onclick = clearProject;
+id("logType").onchange = () => { id("logNumber").dataset.auto = "true"; updateAutoNumber(); };
+id("logNumber").oninput = () => { id("logNumber").dataset.auto = "false"; };
+id("photoInput").onchange = e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    stagedPhoto = ev.target.result;
+    id("photoPreview").src = stagedPhoto;
+    id("photoPreview").classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+};
+id("saveLogBtn").onclick = () => saveLog(false);
+id("overrideSaveBtn").onclick = () => saveLog(true);
+id("undoLastLogBtn").onclick = undoLastLog;
+id("sortNewestBtn").onclick = renderAllLogs;
 
 id("downloadCsvBtn").onclick = downloadCsv;
 id("downloadJsonBtn").onclick = downloadJson;
-id("recenterBtn").onclick = centerGps;
+id("downloadKmlBtn").onclick = downloadKml;
+id("downloadReportBtn").onclick = downloadReport;
+id("clearLogsBtn").onclick = clearLogs;
+id("clearProjectBtn").onclick = clearProject;
+
+document.querySelectorAll("[data-fast]").forEach(btn => btn.onclick = () => fastStart(btn.dataset.fast));
 
 initMap();
 refreshProjects();
 startGps();
+updateAutoNumber();
 updateUi();
 </script>
 </body>
