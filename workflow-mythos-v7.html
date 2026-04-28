@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V7</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V7 Capture Packs...</div>
+<iframe id="appFrame" src="./workflow-mythos-v6.html?v=v7pack"></iframe>
+<script>
+const frame = document.getElementById('appFrame');
+const loading = document.getElementById('loading');
+
+const PACKS = {
+  'Repair': {
+    title: 'REPAIR PACK',
+    color: '#c62828',
+    text: 'Patch / bead / repair point. Required now: GPS + repair type. Photo is review-later.'
+  },
+  'Air Test': {
+    title: 'AIR TEST PACK',
+    color: '#0d47a1',
+    text: 'Air test record. Critical: 5 minute hold, start pressure, end pressure, and result.'
+  },
+  'Destructive Test': {
+    title: 'DESTRUCTIVE TEST PACK',
+    color: '#7c2d12',
+    text: 'DT record. Watch 500 ft spacing and station/footage for export cleanup.'
+  },
+  'Panel': {
+    title: 'PANEL PACK',
+    color: '#15803d',
+    text: 'Panel placement. Track roll used, orientation/slope, station, length, and width.'
+  },
+  'Seam': {
+    title: 'SEAM PACK',
+    color: '#1976d2',
+    text: 'Seam record. Tie panel A/B, station, orientation, length, tech, and result.'
+  },
+  'Roll Use': {
+    title: 'ROLL PACK',
+    color: '#1e3a8a',
+    text: 'Roll inventory/use. Set active roll so Mythos can carry it forward.'
+  },
+  'Wedge Test': {
+    title: 'WEDGE TEST PACK',
+    color: '#9333ea',
+    text: 'Wedge weld test. Choose wedger and result. Failed test creates follow-up.'
+  },
+  'Extrusion Test': {
+    title: 'EXTRUSION TEST PACK',
+    color: '#be123c',
+    text: 'Extrusion / hand weld test. Choose welder and result. Failed test creates follow-up.'
+  }
+};
+
+function injectPacks(){
+  const doc = frame.contentDocument;
+  if(!doc) return;
+  loading.style.display = 'none';
+  const title = doc.querySelector('.title');
+  const sub = doc.querySelector('.sub');
+  if(title) title.textContent = 'LinerSync Mythos V7';
+  if(sub) sub.textContent = 'VISIBLE CAPTURE PACKS';
+  let style = doc.getElementById('v7-pack-style');
+  if(!style){
+    style = doc.createElement('style');
+    style.id='v7-pack-style';
+    style.textContent = `
+      #v7PackBanner{border:3px solid #0d47a1;border-radius:20px;padding:14px;margin:8px 0 12px 0;background:#eff6ff;box-shadow:0 6px 18px rgba(13,71,161,.22)}
+      #v7PackTitle{font-size:24px;font-weight:1000;letter-spacing:.5px;color:#0d47a1;margin-bottom:6px}
+      #v7PackText{font-size:15px;font-weight:900;color:#0f172a;line-height:1.35}
+      #v7PackStrip{height:8px;border-radius:999px;background:#0d47a1;margin-top:10px}
+    `;
+    doc.head.appendChild(style);
+  }
+  const captureCard = doc.querySelector('#capture .card');
+  if(captureCard && !doc.getElementById('v7PackBanner')){
+    const banner = doc.createElement('div');
+    banner.id='v7PackBanner';
+    banner.innerHTML='<div id="v7PackTitle">CAPTURE PACK</div><div id="v7PackText">Choose a log type.</div><div id="v7PackStrip"></div>';
+    const hint = doc.getElementById('captureHint');
+    captureCard.insertBefore(banner, hint || captureCard.firstChild);
+  }
+  const type = doc.getElementById('type');
+  function update(){
+    const pack = PACKS[type?.value] || PACKS.Repair;
+    const banner = doc.getElementById('v7PackBanner');
+    const pTitle = doc.getElementById('v7PackTitle');
+    const pText = doc.getElementById('v7PackText');
+    const strip = doc.getElementById('v7PackStrip');
+    if(banner){ banner.style.borderColor = pack.color; banner.style.background = '#fff'; }
+    if(pTitle){ pTitle.textContent = pack.title; pTitle.style.color = pack.color; }
+    if(pText){ pText.textContent = pack.text; }
+    if(strip){ strip.style.background = pack.color; }
+  }
+  if(type && !type.dataset.v7PackHooked){ type.dataset.v7PackHooked='yes'; type.addEventListener('change', update); }
+  update();
+}
+
+frame.addEventListener('load', () => {
+  setTimeout(injectPacks, 300);
+  setTimeout(injectPacks, 1000);
+});
+</script>
+</body>
+</html>
