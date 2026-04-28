@@ -8,98 +8,23 @@
 </head>
 <body>
 <div id="loading">Loading Mythos V15 End-of-Day Review...</div>
-<iframe id="appFrame" src="./workflow-mythos-v14.html?v=v15eodreview"></iframe>
+<iframe id="appFrame" src="./workflow-mythos-v14.html?v=v15stableheader"></iframe>
 <script>
 const frame=document.getElementById('appFrame');
 const loading=document.getElementById('loading');
 function outerDoc(){return frame.contentDocument||frame.contentWindow?.document;}
-function appDoc(){
- const od=outerDoc();
- const l1=od?.getElementById('appFrame');
- const d1=l1?.contentDocument||l1?.contentWindow?.document||od;
- const l2=d1?.getElementById('appFrame');
- const d2=l2?.contentDocument||l2?.contentWindow?.document||d1;
- const l3=d2?.getElementById('appFrame');
- return l3?.contentDocument||l3?.contentWindow?.document||d2;
-}
-function appWin(){
- const od=outerDoc();
- const l1=od?.getElementById('appFrame');
- const d1=l1?.contentDocument||l1?.contentWindow?.document;
- const l2=d1?.getElementById('appFrame');
- const d2=l2?.contentDocument||l2?.contentWindow?.document;
- const l3=d2?.getElementById('appFrame');
- return l3?.contentWindow||l2?.contentWindow||l1?.contentWindow||frame.contentWindow;
-}
-function status(msg,tone='info'){
- const d=appDoc();if(!d)return;
- const s=d.getElementById('status');
- if(s){s.textContent=msg;s.style.fontWeight='900';s.style.color=tone==='danger'?'#c62828':tone==='warn'?'#9a3412':tone==='good'?'#047857':'#0d47a1';}
- let toast=d.getElementById('v15Toast');
- if(!toast){toast=d.createElement('div');toast.id='v15Toast';toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:15000;border:3px solid #9ec5ff;border-radius:18px;background:#fff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';d.body.appendChild(toast);}
- toast.textContent=msg;toast.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>toast.style.display='none',2600);
-}
+function appDoc(){const od=outerDoc();const l1=od?.getElementById('appFrame');const d1=l1?.contentDocument||l1?.contentWindow?.document||od;const l2=d1?.getElementById('appFrame');const d2=l2?.contentDocument||l2?.contentWindow?.document||d1;const l3=d2?.getElementById('appFrame');return l3?.contentDocument||l3?.contentWindow?.document||d2;}
+function appWin(){const od=outerDoc();const l1=od?.getElementById('appFrame');const d1=l1?.contentDocument||l1?.contentWindow?.document;const l2=d1?.getElementById('appFrame');const d2=l2?.contentDocument||l2?.contentWindow?.document;const l3=d2?.getElementById('appFrame');return l3?.contentWindow||l2?.contentWindow||l1?.contentWindow||frame.contentWindow;}
+function status(msg,tone='info'){const d=appDoc();if(!d)return;const s=d.getElementById('status');if(s){s.textContent=msg;s.style.fontWeight='900';s.style.color=tone==='danger'?'#c62828':tone==='warn'?'#9a3412':tone==='good'?'#047857':'#0d47a1';}let toast=d.getElementById('v15Toast');if(!toast){toast=d.createElement('div');toast.id='v15Toast';toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:15000;border:3px solid #9ec5ff;border-radius:18px;background:#fff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';d.body.appendChild(toast);}toast.textContent=msg;toast.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>toast.style.display='none',2600);}
 function tab(name){const d=appDoc();const b=Array.from(d?.querySelectorAll('.tab')||[]).find(x=>x.dataset.tab===name);if(b)b.click();}
 function counts(){const d=appDoc();return{critical:Number((d?.getElementById('kCritical')?.textContent||'0').trim())||0,review:Number((d?.getElementById('kReview')?.textContent||'0').trim())||0,logs:Number((d?.getElementById('kLogs')?.textContent||'0').trim())||0,open:Number((d?.getElementById('kOpen')?.textContent||'0').trim())||0};}
-function getExportReviewItems(){
- const d=appDoc();
- const exportStatus=d?.getElementById('exportStatus');
- if(!exportStatus)return [];
- const items=Array.from(exportStatus.querySelectorAll('li')).map(x=>(x.textContent||'').trim()).filter(Boolean);
- return items.filter(t=>/review|photo|cell|pond|lagoon|roll|station|footage|technician|override|no logs|missing/i.test(t)).slice(0,20);
-}
-function openEod(){
- tab('export');
- setTimeout(()=>{const d=appDoc();const p=d?.getElementById('v15EodPanel');if(p){p.scrollIntoView({behavior:'smooth',block:'start'});p.style.outline='5px solid #22c55e';setTimeout(()=>p.style.outline='',2400);}},350);
- status('Opened End-of-Day Review. Clean review-later items here before export.','info');
-}
-function addHomeButton(){
- const d=appDoc();const home=d?.getElementById('home');if(!home)return;
- let card=d.getElementById('v15HomeEodCard');
- if(!card){
-  card=d.createElement('div');card.id='v15HomeEodCard';card.className='card';
-  card.innerHTML='<div class="cardTitle">End-of-Day Review</div><div id="v15HomeEodText" class="okBox"></div><button id="v15OpenEod" class="secondary" style="width:100%;margin-top:8px;font-weight:1000;">Open End-of-Day Review</button>';
-  const fast=Array.from(home.querySelectorAll('.card')).find(c=>/Fast Workflow/i.test(c.textContent||''));
-  home.insertBefore(card,fast||null);
- }
- const c=counts();const txt=d.getElementById('v15HomeEodText');
- if(txt){
-  if(c.critical>0){txt.className='warnBox';txt.textContent='Stay focused: fix critical items now. Review-later cleanup is waiting in Export.';}
-  else if(c.review>0){txt.className='okBox';txt.textContent=c.review+' review-later item(s) stored for end-of-day cleanup.';}
-  else{txt.className='okBox';txt.textContent='No review-later cleanup stored right now.';}
- }
- const btn=d.getElementById('v15OpenEod');if(btn&&!btn.dataset.v15){btn.dataset.v15='yes';btn.onclick=openEod;}
-}
-function addExportPanel(){
- const d=appDoc();const exportSec=d?.getElementById('export');if(!exportSec)return;
- let panel=d.getElementById('v15EodPanel');
- if(!panel){
-  panel=d.createElement('div');panel.id='v15EodPanel';panel.className='card';
-  panel.innerHTML='<div class="cardTitle">End-of-Day Review</div><div id="v15EodStatus" class="warnBox"></div><div id="v15EodList" style="margin-top:8px"></div><button id="v15RefreshEod" class="secondary" style="width:100%;margin-top:8px;font-weight:1000;">Refresh Review List</button>';
-  exportSec.insertBefore(panel,exportSec.firstChild);
- }
- const c=counts();const statusBox=d.getElementById('v15EodStatus');
- if(statusBox){
-  if(c.critical>0){statusBox.className='redBox';statusBox.textContent='Critical items still exist. Fix or override critical work before final export.';}
-  else if(c.review>0){statusBox.className='warnBox';statusBox.textContent=c.review+' review-later item(s) to check before leaving site.';}
-  else{statusBox.className='okBox';statusBox.textContent='No review-later cleanup. Export should be clean after final check.';}
- }
- const list=d.getElementById('v15EodList');
- if(list){
-  const items=getExportReviewItems();
-  if(items.length){list.innerHTML=items.map((t,i)=>'<div class="item"><b>'+(i+1)+'. Review Later</b><div class="itemMeta">'+t.replace(/^\[review\]\s*/i,'')+'</div></div>').join('');}
-  else{list.innerHTML='<div class="item"><b>No review-later items listed.</b><div class="itemMeta">Export readiness has no cleanup items right now.</div></div>';}
- }
- const refresh=d.getElementById('v15RefreshEod');if(refresh&&!refresh.dataset.v15){refresh.dataset.v15='yes';refresh.onclick=()=>{addExportPanel();status('End-of-Day Review refreshed.','good');};}
-}
-function patchTitle(){const d=appDoc();if(!d)return;const title=d.querySelector('.title'),sub=d.querySelector('.sub');if(title)title.textContent='LinerSync Mythos V15';if(sub)sub.textContent='END-OF-DAY REVIEW';}
-function inject(){
- const d=appDoc();const w=appWin();if(!d||!w)return;loading.style.display='none';patchTitle();
- if(!d.getElementById('v15Style')){const s=d.createElement('style');s.id='v15Style';s.textContent='#v15HomeEodCard,#v15EodPanel{border-color:#fdba74} #v15OpenEod,#v15RefreshEod{background:#fff7ed;color:#9a3412;border-color:#fdba74}';d.head.appendChild(s);}
- addHomeButton();addExportPanel();
- if(!w.__v15Alert){w.__v15Alert=true;w.alert=function(m){status(String(m||'Notice.'),'info');};}
-}
-frame.addEventListener('load',()=>{setTimeout(inject,1400);setTimeout(inject,2800);setInterval(inject,1200);});
+function getExportReviewItems(){const d=appDoc();const exportStatus=d?.getElementById('exportStatus');if(!exportStatus)return [];const items=Array.from(exportStatus.querySelectorAll('li')).map(x=>(x.textContent||'').trim()).filter(Boolean);return items.filter(t=>/review|photo|cell|pond|lagoon|roll|station|footage|technician|override|no logs|missing/i.test(t)).slice(0,20);}
+function openEod(){tab('export');setTimeout(()=>{const d=appDoc();const p=d?.getElementById('v15EodPanel');if(p){p.scrollIntoView({behavior:'smooth',block:'start'});p.style.outline='5px solid #22c55e';setTimeout(()=>p.style.outline='',2400);}},350);status('Opened End-of-Day Review. Clean review-later items here before export.','info');}
+function addHomeButton(){const d=appDoc();const home=d?.getElementById('home');if(!home)return;let card=d.getElementById('v15HomeEodCard');if(!card){card=d.createElement('div');card.id='v15HomeEodCard';card.className='card';card.innerHTML='<div class="cardTitle">End-of-Day Review</div><div id="v15HomeEodText" class="okBox"></div><button id="v15OpenEod" class="secondary" style="width:100%;margin-top:8px;font-weight:1000;">Open End-of-Day Review</button>';const fast=Array.from(home.querySelectorAll('.card')).find(c=>/Fast Workflow/i.test(c.textContent||''));home.insertBefore(card,fast||null);}const c=counts();const txt=d.getElementById('v15HomeEodText');if(txt){if(c.critical>0){txt.className='warnBox';txt.textContent='Stay focused: fix critical items now. Review-later cleanup is waiting in Export.';}else if(c.review>0){txt.className='okBox';txt.textContent=c.review+' review-later item(s) stored for end-of-day cleanup.';}else{txt.className='okBox';txt.textContent='No review-later cleanup stored right now.';}}const btn=d.getElementById('v15OpenEod');if(btn&&!btn.dataset.v15){btn.dataset.v15='yes';btn.onclick=openEod;}}
+function addExportPanel(){const d=appDoc();const exportSec=d?.getElementById('export');if(!exportSec)return;let panel=d.getElementById('v15EodPanel');if(!panel){panel=d.createElement('div');panel.id='v15EodPanel';panel.className='card';panel.innerHTML='<div class="cardTitle">End-of-Day Review</div><div id="v15EodStatus" class="warnBox"></div><div id="v15EodList" style="margin-top:8px"></div><button id="v15RefreshEod" class="secondary" style="width:100%;margin-top:8px;font-weight:1000;">Refresh Review List</button>';exportSec.insertBefore(panel,exportSec.firstChild);}const c=counts();const statusBox=d.getElementById('v15EodStatus');if(statusBox){if(c.critical>0){statusBox.className='redBox';statusBox.textContent='Critical items still exist. Fix or override critical work before final export.';}else if(c.review>0){statusBox.className='warnBox';statusBox.textContent=c.review+' review-later item(s) to check before leaving site.';}else{statusBox.className='okBox';statusBox.textContent='No review-later cleanup. Export should be clean after final check.';}}const list=d.getElementById('v15EodList');if(list){const items=getExportReviewItems();if(items.length){list.innerHTML=items.map((t,i)=>'<div class="item"><b>'+(i+1)+'. Review Later</b><div class="itemMeta">'+t.replace(/^\[review\]\s*/i,'')+'</div></div>').join('');}else{list.innerHTML='<div class="item"><b>No review-later items listed.</b><div class="itemMeta">Export readiness has no cleanup items right now.</div></div>';}}const refresh=d.getElementById('v15RefreshEod');if(refresh&&!refresh.dataset.v15){refresh.dataset.v15='yes';refresh.onclick=()=>{addExportPanel();status('End-of-Day Review refreshed.','good');};}}
+function stableHeader(){const d=appDoc();if(!d)return;const oldTitle=d.querySelector('.title');const oldSub=d.querySelector('.sub');if(oldTitle){oldTitle.style.display='none';}if(oldSub){oldSub.style.display='none';}let holder=d.getElementById('v15StableHeader');if(!holder){holder=d.createElement('div');holder.id='v15StableHeader';holder.style.cssText='text-align:center;color:#0d47a1;font-weight:1000;margin:0 0 6px 0;line-height:1.1;';holder.innerHTML='<div style="font-size:22px;">LinerSync Mythos V15</div><div style="font-size:12px;color:#315b94;margin-top:3px;">END-OF-DAY REVIEW</div>';const top=d.querySelector('.top');if(top)top.insertBefore(holder,top.firstChild);else d.body.insertBefore(holder,d.body.firstChild);} }
+function inject(){const d=appDoc();const w=appWin();if(!d||!w)return;loading.style.display='none';stableHeader();if(!d.getElementById('v15Style')){const s=d.createElement('style');s.id='v15Style';s.textContent='#v15HomeEodCard,#v15EodPanel{border-color:#fdba74} #v15OpenEod,#v15RefreshEod{background:#fff7ed;color:#9a3412;border-color:#fdba74}';d.head.appendChild(s);}addHomeButton();addExportPanel();if(!w.__v15Alert){w.__v15Alert=true;w.alert=function(m){status(String(m||'Notice.'),'info');};}}
+frame.addEventListener('load',()=>{setTimeout(inject,1400);setTimeout(inject,2800);setInterval(inject,600);});
 </script>
 </body>
 </html>
