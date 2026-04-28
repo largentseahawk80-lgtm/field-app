@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V10</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V10 GPS Quality Panel...</div>
+<iframe id="appFrame" src="./workflow-mythos-v6.html?v=v10gps"></iframe>
+<script>
+const frame = document.getElementById('appFrame');
+const loading = document.getElementById('loading');
+
+const PACKS = {
+  'Repair': { title:'REPAIR PACK', color:'#c62828', text:'Patch / bead / repair point. Required now: GPS + repair type. Photo is review-later.' },
+  'Air Test': { title:'AIR TEST PACK', color:'#0d47a1', text:'Air test record. Critical: 5 minute hold, start pressure, end pressure, and result.' },
+  'Destructive Test': { title:'DESTRUCTIVE TEST PACK', color:'#7c2d12', text:'DT record. Watch 500 ft spacing and station/footage for export cleanup.' },
+  'DT Patch': { title:'DT PATCH PACK', color:'#7c2d12', text:'Finish the patch created by a destructive test cut.' },
+  'Retest': { title:'RETEST PACK', color:'#be123c', text:'Follow-up test after failed/repair work. Capture result and notes.' },
+  'Panel': { title:'PANEL PACK', color:'#15803d', text:'Panel placement. Track roll used, orientation/slope, station, length, and width.' },
+  'Seam': { title:'SEAM PACK', color:'#1976d2', text:'Seam record. Tie panel A/B, station, orientation, length, tech, and result.' },
+  'Roll Use': { title:'ROLL PACK', color:'#1e3a8a', text:'Roll inventory/use. Set active roll so Mythos can carry it forward.' },
+  'Wedge Test': { title:'WEDGE TEST PACK', color:'#9333ea', text:'Wedge weld test. Choose wedger and result. Failed test creates follow-up.' },
+  'Extrusion Test': { title:'EXTRUSION TEST PACK', color:'#be123c', text:'Extrusion / hand weld test. Choose welder and result. Failed test creates follow-up.' },
+  'Other': { title:'OPEN ITEM PACK', color:'#334155', text:'General open QC item. Add notes and finish when complete.' }
+};
+const OPEN_CHOICES = [
+  { label:'Start Repair', type:'Repair' }, { label:'Start Panel', type:'Panel' }, { label:'Start Seam', type:'Seam' },
+  { label:'Start Air Test', type:'Air Test' }, { label:'Start DT Patch', type:'DT Patch' }, { label:'Start Retest', type:'Retest' }, { label:'Start Other', type:'Other' }
+];
+let lastGps = null;
+
+function getDoc(){ return frame.contentDocument || frame.contentWindow?.document; }
+function getWin(){ return frame.contentWindow; }
+function statusMessage(message, tone='info'){
+  const doc = getDoc(); if(!doc) return;
+  const status = doc.getElementById('status');
+  if(status){ status.textContent = message; status.style.fontWeight='900'; status.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : tone === 'warn' ? '#9a3412' : '#0d47a1'; }
+  let toast = doc.getElementById('v10Toast');
+  if(!toast){ toast = doc.createElement('div'); toast.id='v10Toast'; toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:9999;border:3px solid #9ec5ff;border-radius:18px;background:#ffffff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;'; doc.body.appendChild(toast); }
+  toast.textContent = message;
+  toast.style.borderColor = tone === 'danger' ? '#fda4af' : tone === 'good' ? '#86efac' : tone === 'warn' ? '#fdba74' : '#9ec5ff';
+  toast.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : tone === 'warn' ? '#9a3412' : '#0d47a1';
+  toast.style.display='block'; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{toast.style.display='none'},2800);
+}
+function openItemStore(){ try{return JSON.parse(localStorage.getItem('linersync-mythos-v10-open-items')||localStorage.getItem('linersync-mythos-v9-open-items')||'[]')}catch(e){return[]} }
+function saveOpenItems(items){ localStorage.setItem('linersync-mythos-v10-open-items', JSON.stringify(items)); }
+function makeOpenNumber(type){ const prefix= type==='Repair'?'R':type==='Panel'?'P':type==='Seam'?'S':type==='Air Test'?'AT':type==='DT Patch'?'DTP':type==='Retest'?'RT':'OPEN'; const count=openItemStore().filter(x=>x.type===type).length+1; return prefix+'-OPEN-'+String(count).padStart(3,'0'); }
+function currentContext(){ const doc=getDoc(); const badgeText=Array.from(doc?.querySelectorAll('.badge')||[]).map(x=>x.textContent||''); return { project:doc?.getElementById('projectSelect')?.selectedOptions?.[0]?.textContent||'Default Project', cell:(badgeText.find(x=>/^Cell /i.test(x))||'').replace(/^Cell /i,'')||'', roll:(badgeText.find(x=>/^Roll /i.test(x))||'').replace(/^Roll /i,'')||'', panel:(badgeText.find(x=>/^Panel /i.test(x))||'').replace(/^Panel /i,'')||'', seam:(badgeText.find(x=>/^Seam /i.test(x))||'').replace(/^Seam /i,'')||'', gps:lastGps, startedAt:new Date().toISOString() }; }
+
+function gpsLevel(acc){ if(acc == null) return {level:'amber',label:'Accuracy unknown',tone:'warn'}; if(acc<=10) return {level:'green',label:'Good GPS',tone:'good'}; if(acc<=30) return {level:'amber',label:'Usable GPS',tone:'warn'}; return {level:'red',label:'Poor GPS',tone:'danger'}; }
+function updateGpsPanel(){
+  const doc=getDoc(); if(!doc) return;
+  const panel=doc.getElementById('v10GpsPanel'); if(!panel) return;
+  const status=doc.getElementById('v10GpsStatus'), source=doc.getElementById('v10GpsSource'), acc=doc.getElementById('v10GpsAccuracy'), time=doc.getElementById('v10GpsTime'), coords=doc.getElementById('v10GpsCoords'), strip=doc.getElementById('v10GpsStrip');
+  if(!lastGps){ status.textContent='No GPS fix yet'; source.textContent='Source: none'; acc.textContent='Accuracy: missing'; time.textContent='Last fix: none'; coords.textContent='Coordinates: missing'; strip.style.background='#c62828'; panel.style.borderColor='#fda4af'; return; }
+  const lvl=gpsLevel(lastGps.accuracy);
+  status.textContent=lvl.label; source.textContent='Source: '+(lastGps.source||'phone'); acc.textContent='Accuracy: ±'+Math.round(lastGps.accuracy||0)+' m'; time.textContent='Last fix: '+new Date(lastGps.timestamp).toLocaleTimeString([], {hour12:true}); coords.textContent='Coordinates: '+Number(lastGps.lat).toFixed(6)+', '+Number(lastGps.lng).toFixed(6); strip.style.background= lvl.level==='green'?'#15803d':lvl.level==='amber'?'#d97706':'#c62828'; panel.style.borderColor= lvl.level==='green'?'#86efac':lvl.level==='amber'?'#fdba74':'#fda4af';
+}
+function getGpsFix(){
+  const doc=getDoc(); const win=getWin(); if(!win?.navigator?.geolocation){ statusMessage('GPS not supported in this browser.', 'danger'); return; }
+  statusMessage('Getting GPS fix. Hold still a moment.', 'info');
+  win.navigator.geolocation.getCurrentPosition(pos=>{
+    lastGps={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,source:'phone',timestamp:new Date().toISOString()};
+    localStorage.setItem('linersync-mythos-v10-last-gps', JSON.stringify(lastGps));
+    const lvl=gpsLevel(lastGps.accuracy);
+    updateGpsPanel();
+    const originalGpsBtn=doc.getElementById('gpsBtn');
+    if(originalGpsBtn) originalGpsBtn.textContent='GPS OK';
+    statusMessage(lvl.label+' — ±'+Math.round(lastGps.accuracy||0)+' m', lvl.tone);
+    try { const winGps = frame.contentWindow; winGps.gps = lastGps; } catch(e) {}
+  }, err=>{ statusMessage('GPS blocked or unavailable. Allow browser location and retry.', 'danger'); updateGpsPanel(); }, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
+}
+
+function createPicker(){ const doc=getDoc(); if(!doc||doc.getElementById('v10OpenPicker')) return; const overlay=doc.createElement('div'); overlay.id='v10OpenPicker'; overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;display:none;place-items:center;padding:18px;'; overlay.innerHTML=`<div style="width:min(620px,100%);background:#fff;border:3px solid #9ec5ff;border-radius:24px;padding:16px;box-shadow:0 14px 38px rgba(0,0,0,.28);"><div style="font-size:22px;font-weight:1000;color:#0d47a1;margin-bottom:6px;">Start Open Item</div><div style="font-size:14px;font-weight:900;color:#315b94;margin-bottom:12px;">Pick what you are starting. Mythos will keep it open until you finish it.</div><div id="v10OpenChoices" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div><button id="v10CancelOpen" style="margin-top:12px;width:100%;min-height:52px;border:2px solid #9ec5ff;border-radius:16px;background:#fff;color:#0d47a1;font-weight:1000;">Cancel</button></div>`; doc.body.appendChild(overlay); const choices=overlay.querySelector('#v10OpenChoices'); OPEN_CHOICES.forEach(choice=>{ const btn=doc.createElement('button'); btn.textContent=choice.label; btn.style.cssText='min-height:56px;border:2px solid #9ec5ff;border-radius:16px;background:#1976d2;color:#fff;font-weight:1000;'; btn.onclick=()=>{overlay.style.display='none';startOpenItem(choice.type)}; choices.appendChild(btn); }); overlay.querySelector('#v10CancelOpen').onclick=()=>{overlay.style.display='none';statusMessage('Open item start cancelled. Keep logging.','info')}; }
+function showPicker(){ createPicker(); const p=getDoc().getElementById('v10OpenPicker'); if(p) p.style.display='grid'; }
+function startOpenItem(type){ const ctx=currentContext(), number=makeOpenNumber(type); const item={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),type,number,status:'OPEN',...ctx}; const items=openItemStore(); items.push(item); saveOpenItems(items); renderOpenItems(); statusMessage('Started open item: '+type+' '+number,'good'); }
+function mapOpenTypeToCapture(type){ if(type==='DT Patch')return'Repair'; if(type==='Retest')return'Wedge Test'; if(type==='Other')return'Repair'; return type; }
+function finishOpenItem(){ const items=openItemStore(); if(!items.length){ statusMessage('No open item to finish. Start one first, or keep logging.','info'); const finish=getDoc()?.getElementById('finishItem'); if(finish){finish.textContent='No Open Item';setTimeout(()=>{finish.textContent='Finish Open Item'},1600)} return; } const item=items.pop(); saveOpenItems(items); const doc=getDoc(); const typeSelect=doc.getElementById('type'), numberInput=doc.getElementById('number'), notes=doc.getElementById('notes'); if(typeSelect){typeSelect.value=mapOpenTypeToCapture(item.type);typeSelect.dispatchEvent(new Event('change',{bubbles:true}))} if(numberInput)numberInput.value=item.number; if(notes){notes.value=(notes.value?notes.value+'\n':'')+'Finished open item: '+item.type+' started '+new Date(item.startedAt).toLocaleString([], {hour12:true})+'.'} const capTab=Array.from(doc.querySelectorAll('.tab')).find(b=>b.dataset.tab==='capture'); if(capTab)capTab.click(); renderOpenItems(); updatePack(); statusMessage('Loaded '+item.type+' '+item.number+' into Capture to finish.','good'); }
+function renderOpenItems(){ const doc=getDoc(); if(!doc)return; const box=doc.getElementById('openItems'); if(!box)return; const items=openItemStore(); if(!items.length){box.innerHTML='<div class="item">No open items</div>';return} box.innerHTML=''; items.slice().reverse().forEach(item=>{ const d=doc.createElement('div'); d.className='item'; const gpsTxt=item.gps&&item.gps.lat?' | GPS ±'+Math.round(item.gps.accuracy||0)+'m':''; d.innerHTML='<b>'+item.type+' — '+item.number+'</b><div class="itemMeta">Started '+new Date(item.startedAt).toLocaleString([], {hour12:true})+' | Status OPEN'+gpsTxt+'</div><div class="itemMeta">Roll '+(item.roll||'')+' | Panel '+(item.panel||'')+' | Seam '+(item.seam||'')+'</div>'; box.appendChild(d); }); }
+function updatePack(){ const doc=getDoc(); if(!doc)return; const type=doc.getElementById('type'); const pack=PACKS[type?.value]||PACKS.Repair; const banner=doc.getElementById('v7PackBanner'), title=doc.getElementById('v7PackTitle'), text=doc.getElementById('v7PackText'), strip=doc.getElementById('v7PackStrip'); if(banner)banner.style.borderColor=pack.color; if(title){title.textContent=pack.title;title.style.color=pack.color} if(text)text.textContent=pack.text; if(strip)strip.style.background=pack.color; }
+
+function injectV10(){
+  const doc=getDoc(), win=getWin(); if(!doc||!win)return; loading.style.display='none';
+  try{ lastGps = JSON.parse(localStorage.getItem('linersync-mythos-v10-last-gps')||'null'); }catch(e){ lastGps=null; }
+  const title=doc.querySelector('.title'), sub=doc.querySelector('.sub'); if(title)title.textContent='LinerSync Mythos V10'; if(sub)sub.textContent='GPS QUALITY PANEL';
+  if(!doc.getElementById('v10-style')){ const style=doc.createElement('style'); style.id='v10-style'; style.textContent=`#v7PackBanner{border:3px solid #0d47a1;border-radius:20px;padding:14px;margin:8px 0 12px 0;background:#fff;box-shadow:0 6px 18px rgba(13,71,161,.22)}#v7PackTitle{font-size:24px;font-weight:1000;letter-spacing:.5px;color:#0d47a1;margin-bottom:6px}#v7PackText{font-size:15px;font-weight:900;color:#0f172a;line-height:1.35}#v7PackStrip{height:8px;border-radius:999px;background:#0d47a1;margin-top:10px}#v10GpsPanel{border:3px solid #fda4af;border-radius:20px;padding:14px;margin:8px 0;background:#fff;box-shadow:0 6px 18px rgba(13,71,161,.18)}#v10GpsPanel b{font-size:20px;color:#0d47a1}#v10GpsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}#v10GpsGrid div{border:2px solid #9ec5ff;border-radius:14px;padding:10px;font-weight:900;color:#0f172a;background:#f8fbff}#v10GpsStrip{height:8px;border-radius:999px;background:#c62828;margin-top:10px}#v10GetGps{width:100%;margin-top:10px;min-height:56px;border:2px solid #86efac;border-radius:16px;background:#15803d;color:#fff;font-weight:1000}@media(max-width:600px){#v10GpsGrid{grid-template-columns:1fr}}`; doc.head.appendChild(style); }
+  const home=doc.getElementById('home'); const firstCard=home?.querySelector('.card'); if(firstCard&&!doc.getElementById('v10GpsPanel')){ const panel=doc.createElement('div'); panel.id='v10GpsPanel'; panel.innerHTML='<b>GPS Quality</b><div id="v10GpsGrid"><div id="v10GpsStatus">No GPS fix yet</div><div id="v10GpsSource">Source: none</div><div id="v10GpsAccuracy">Accuracy: missing</div><div id="v10GpsTime">Last fix: none</div><div id="v10GpsCoords" style="grid-column:1/-1">Coordinates: missing</div></div><button id="v10GetGps">Get GPS Fix</button><div id="v10GpsStrip"></div>'; home.insertBefore(panel, firstCard); }
+  const gpsPanelBtn=doc.getElementById('v10GetGps'); if(gpsPanelBtn&&!gpsPanelBtn.dataset.v10Hooked){gpsPanelBtn.dataset.v10Hooked='yes';gpsPanelBtn.onclick=getGpsFix;}
+  const gpsBtn=doc.getElementById('gpsBtn'); if(gpsBtn&&!gpsBtn.dataset.v10Hooked){gpsBtn.dataset.v10Hooked='yes';gpsBtn.onclick=function(e){e.preventDefault();e.stopImmediatePropagation();getGpsFix();};}
+  updateGpsPanel();
+  const captureCard=doc.querySelector('#capture .card'); if(captureCard&&!doc.getElementById('v7PackBanner')){ const banner=doc.createElement('div'); banner.id='v7PackBanner'; banner.innerHTML='<div id="v7PackTitle">CAPTURE PACK</div><div id="v7PackText">Choose a log type.</div><div id="v7PackStrip"></div>'; const hint=doc.getElementById('captureHint'); captureCard.insertBefore(banner,hint||captureCard.firstChild); }
+  const type=doc.getElementById('type'); if(type&&!type.dataset.v10PackHooked){type.dataset.v10PackHooked='yes';type.addEventListener('change',updatePack)} updatePack();
+  if(!win.__v10AlertPatched){ win.__v10AlertPatched=true; win.alert=function(message){statusMessage(String(message||'Notice.'),'info')}; }
+  const start=doc.getElementById('startItem'); if(start&&!start.dataset.v10Hooked){start.dataset.v10Hooked='yes';start.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();showPicker();},true)}
+  const finish=doc.getElementById('finishItem'); if(finish&&!finish.dataset.v10Hooked){finish.dataset.v10Hooked='yes';finish.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();finishOpenItem();},true)}
+  createPicker(); renderOpenItems();
+}
+frame.addEventListener('load',()=>{setTimeout(injectV10,300);setTimeout(injectV10,1000);setInterval(injectV10,2000);});
+</script>
+</body>
+</html>
