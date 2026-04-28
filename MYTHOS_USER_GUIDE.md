@@ -1,14 +1,22 @@
-# LinerSync Mythos V3 — User Guide and Development Manual
+# LinerSync Mythos V4 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v3.html`
+Live test build: `workflow-mythos-v4.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V3 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V4 workflow without guessing.
 
-Mythos is not a separate chatbot tab. Mythos is the workflow brain running behind the app. It watches the project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
+Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
+
+## Current Live Test Link
+
+Use this build for the new built-in guide:
+
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v4.html`
+
+The older V3 test file remains in the repo for reference.
 
 ## The Simple Field Flow
 
@@ -20,6 +28,7 @@ Use the app in this order:
 4. **Capture** — choose the log type and save records.
 5. **Logs** — review what was saved.
 6. **Export** — check readiness and export CSV / JSON / KML / report.
+7. **Guide** — open the built-in manual whenever the screen is confusing.
 
 ## Home Tab
 
@@ -33,7 +42,7 @@ It shows:
 - **Issues** — total active issues.
 - **Next action** — what Mythos thinks you should do next.
 - **Top 3 Active Issues** — the three most important warnings right now.
-- **Fast Workflow buttons** — quick launch buttons for Roll Use, Panel, Seam, Repair, Wedge Test, Air Test, DT, and Export Check.
+- **Fast Workflow buttons** — quick launch buttons for Roll Use, Panel, Seam, Repair, Wedge Test, Air Test, DT, and Guide.
 - **Latest Logs** — newest saved records.
 
 ### Top 3 Active Issues
@@ -216,6 +225,25 @@ Google Earth point export for GPS-backed records.
 
 Plain text summary with project, readiness, top issues, open items, total logs, next action, and latest logs.
 
+## Guide Tab
+
+The Guide tab is built into V4 so the field user does not have to remember what every tab does.
+
+It explains:
+
+- Home
+- Top 3 Active Issues
+- Setup
+- Tech Lists
+- Capture
+- Warnings
+- Save Override
+- Open Items
+- Logs
+- Export
+
+Use it any time the app feels confusing.
+
 ## Mythos Warning Logic
 
 Mythos currently checks for:
@@ -255,9 +283,17 @@ Mythos is calculating:
 
 ## Current Development Rule
 
-From this point forward, every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
+Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V4 built-in Guide tab
+
+- Added `workflow-mythos-v4.html`.
+- Added a sixth app tab: **Guide**.
+- Guide explains Home, Setup, Capture, Logs, Export, Open Items, Save Override, Top 3 Active Issues, and warning behavior.
+- V4 uses separate local storage key `linersync-mythos-v4` so it does not corrupt V3 test data.
+- V4 exports use filenames ending in `mythos-v4`.
 
 ### 2026-04-28 — Guide started
 
