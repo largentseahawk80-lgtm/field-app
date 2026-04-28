@@ -1,16 +1,16 @@
-# LinerSync Mythos V9 — User Guide and Development Manual
+# LinerSync Mythos V10 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v9.html`
+Live test build: `workflow-mythos-v10.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v9.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v10.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V9 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V10 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,11 +26,33 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V9 Main Upgrade: Real Open Item Workflow
+## V10 Main Upgrade: GPS Quality Panel
 
-V9 makes **Start Open Item** useful.
+V10 adds a clear GPS Quality panel on Home.
 
-Instead of starting a vague item, V9 opens a picker with:
+The panel shows:
+
+- GPS status
+- GPS source
+- Accuracy
+- Last fix time
+- Coordinates
+- A **Get GPS Fix** button
+
+The goal is to stop GPS from being just a vague red badge. You should know whether GPS is missing, usable, or good before you start saving field logs.
+
+### GPS color logic
+
+- **Good GPS** — about ±10 meters or better.
+- **Usable GPS** — about ±30 meters or better.
+- **Poor GPS** — worse than about ±30 meters.
+- **Missing GPS** — no fix captured yet.
+
+Critical GPS warnings should still matter for records that need location, but the GPS panel gives you a simple place to check and retry.
+
+## V10 Keeps V9 Open Item Workflow
+
+V10 keeps the Start Open Item picker:
 
 - Start Repair
 - Start Panel
@@ -40,37 +62,11 @@ Instead of starting a vague item, V9 opens a picker with:
 - Start Retest
 - Start Other
 
-When you pick one, Mythos creates an open item with:
+Open items store type, number, start time, project context, cell, roll, panel, seam, GPS when available, and status OPEN.
 
-- Open item type
-- Open item number
-- Start time
-- Project context
-- Cell context
-- Active roll context
-- Active panel context
-- Active seam context
-- Status: OPEN
+Finish Open Item loads the newest open item back into Capture.
 
-The Open Items box then shows the item as real work to finish later.
-
-## Finish Open Item
-
-When you tap **Finish Open Item**, V9 loads the newest open item back into Capture.
-
-Example:
-
-```text
-Repair — R-OPEN-001
-Started 3:45 PM
-Status OPEN
-```
-
-When finished, Mythos loads the correct Capture Pack and fills the open item number so you can complete and save the record.
-
-If there is no open item, V9 shows an in-app message instead of a browser popup.
-
-## V9 Keeps V8 Field-Friendly Messages
+## V10 Keeps V8 Field-Friendly Messages
 
 Normal workflow conditions should not block the screen with browser popups.
 
@@ -82,9 +78,9 @@ No open item to finish. Start one first, or keep logging.
 
 appears inside the app instead of in a browser alert.
 
-## V9 Keeps V7 Capture Packs
+## V10 Keeps V7 Capture Packs
 
-V9 keeps the visible Capture Pack banner:
+V10 keeps the visible Capture Pack banner:
 
 - **REPAIR PACK**
 - **AIR TEST PACK**
@@ -181,6 +177,7 @@ Shows mainly:
 
 Home shows:
 
+- **GPS Quality** — source, status, accuracy, time, coordinates, and Get GPS Fix.
 - **Logs** — number of saved logs.
 - **Open** — number of open workflow items.
 - **Critical** — items that need action now.
@@ -232,7 +229,7 @@ These belong mostly in Export review, not as constant interruptions.
 
 1. **Project** — select or create the project.
 2. **Setup** — enter constant job data and tech names.
-3. **GPS** — tap GPS so the app has location.
+3. **GPS Quality** — tap **Get GPS Fix** before field logging.
 4. **Start Open Item** if you are starting work that may need to be finished later.
 5. **Capture** — choose the log type and confirm the visible Capture Pack.
 6. **Finish Open Item** when the open work is ready to complete.
@@ -304,7 +301,7 @@ Examples:
 - A failed test that needs repair or retest.
 - A destructive test cut that needs patch documentation.
 
-V9 makes open items selectable and finishable instead of vague.
+V10 keeps open items selectable and finishable.
 
 ## Logs Tab
 
@@ -337,17 +334,27 @@ Exports available:
 - KML
 - Daily report
 
-V9 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
+V10 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V6 underneath V9 so the field user does not have to remember what every tab does.
+The Guide tab is built into V6 underneath V10 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V10 GPS Quality Panel
+
+- Added `workflow-mythos-v10.html`.
+- Added GPS Quality panel on Home.
+- GPS Quality panel shows source, status, accuracy, last fix time, and coordinates.
+- Added **Get GPS Fix** button in the GPS panel.
+- Top GPS button now also uses the V10 GPS capture flow.
+- Open items now store GPS when a fix is available.
+- V10 keeps V9 open item workflow, V8 field-friendly messages, V7 capture packs, and V6 smart capture fields.
 
 ### 2026-04-28 — V9 Open Item Workflow
 
