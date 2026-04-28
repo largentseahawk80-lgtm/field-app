@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V8</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V8 Field Messages...</div>
+<iframe id="appFrame" src="./workflow-mythos-v6.html?v=v8messages"></iframe>
+<script>
+const frame = document.getElementById('appFrame');
+const loading = document.getElementById('loading');
+
+const PACKS = {
+  'Repair': { title:'REPAIR PACK', color:'#c62828', text:'Patch / bead / repair point. Required now: GPS + repair type. Photo is review-later.' },
+  'Air Test': { title:'AIR TEST PACK', color:'#0d47a1', text:'Air test record. Critical: 5 minute hold, start pressure, end pressure, and result.' },
+  'Destructive Test': { title:'DESTRUCTIVE TEST PACK', color:'#7c2d12', text:'DT record. Watch 500 ft spacing and station/footage for export cleanup.' },
+  'Panel': { title:'PANEL PACK', color:'#15803d', text:'Panel placement. Track roll used, orientation/slope, station, length, and width.' },
+  'Seam': { title:'SEAM PACK', color:'#1976d2', text:'Seam record. Tie panel A/B, station, orientation, length, tech, and result.' },
+  'Roll Use': { title:'ROLL PACK', color:'#1e3a8a', text:'Roll inventory/use. Set active roll so Mythos can carry it forward.' },
+  'Wedge Test': { title:'WEDGE TEST PACK', color:'#9333ea', text:'Wedge weld test. Choose wedger and result. Failed test creates follow-up.' },
+  'Extrusion Test': { title:'EXTRUSION TEST PACK', color:'#be123c', text:'Extrusion / hand weld test. Choose welder and result. Failed test creates follow-up.' }
+};
+
+function getDoc(){ return frame.contentDocument || frame.contentWindow?.document; }
+function statusMessage(message, tone='info'){
+  const doc = getDoc();
+  if(!doc) return;
+  const status = doc.getElementById('status');
+  if(status){
+    status.textContent = message;
+    status.style.fontWeight = '900';
+    status.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : '#0d47a1';
+  }
+  let toast = doc.getElementById('v8Toast');
+  if(!toast){
+    toast = doc.createElement('div');
+    toast.id='v8Toast';
+    toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:9999;border:3px solid #9ec5ff;border-radius:18px;background:#ffffff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';
+    doc.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.style.borderColor = tone === 'danger' ? '#fda4af' : tone === 'good' ? '#86efac' : '#9ec5ff';
+  toast.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : '#0d47a1';
+  toast.style.display='block';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=>{ toast.style.display='none'; }, 2600);
+}
+
+function injectPacksAndMessages(){
+  const doc = getDoc();
+  const win = frame.contentWindow;
+  if(!doc || !win) return;
+  loading.style.display = 'none';
+
+  const title = doc.querySelector('.title');
+  const sub = doc.querySelector('.sub');
+  if(title) title.textContent = 'LinerSync Mythos V8';
+  if(sub) sub.textContent = 'FIELD-FRIENDLY MESSAGES';
+
+  if(!doc.getElementById('v8-style')){
+    const style = doc.createElement('style');
+    style.id='v8-style';
+    style.textContent = `
+      #v7PackBanner{border:3px solid #0d47a1;border-radius:20px;padding:14px;margin:8px 0 12px 0;background:#fff;box-shadow:0 6px 18px rgba(13,71,161,.22)}
+      #v7PackTitle{font-size:24px;font-weight:1000;letter-spacing:.5px;color:#0d47a1;margin-bottom:6px}
+      #v7PackText{font-size:15px;font-weight:900;color:#0f172a;line-height:1.35}
+      #v7PackStrip{height:8px;border-radius:999px;background:#0d47a1;margin-top:10px}
+      #finishItem.noOpen{background:#eef2f7!important;color:#64748b!important;border-color:#cbd5e1!important;cursor:not-allowed!important}
+    `;
+    doc.head.appendChild(style);
+  }
+
+  const captureCard = doc.querySelector('#capture .card');
+  if(captureCard && !doc.getElementById('v7PackBanner')){
+    const banner = doc.createElement('div');
+    banner.id='v7PackBanner';
+    banner.innerHTML='<div id="v7PackTitle">CAPTURE PACK</div><div id="v7PackText">Choose a log type.</div><div id="v7PackStrip"></div>';
+    const hint = doc.getElementById('captureHint');
+    captureCard.insertBefore(banner, hint || captureCard.firstChild);
+  }
+
+  const type = doc.getElementById('type');
+  function updatePack(){
+    const pack = PACKS[type?.value] || PACKS.Repair;
+    const banner = doc.getElementById('v7PackBanner');
+    const pTitle = doc.getElementById('v7PackTitle');
+    const pText = doc.getElementById('v7PackText');
+    const strip = doc.getElementById('v7PackStrip');
+    if(banner){ banner.style.borderColor = pack.color; }
+    if(pTitle){ pTitle.textContent = pack.title; pTitle.style.color = pack.color; }
+    if(pText){ pText.textContent = pack.text; }
+    if(strip){ strip.style.background = pack.color; }
+  }
+  if(type && !type.dataset.v8PackHooked){ type.dataset.v8PackHooked='yes'; type.addEventListener('change', updatePack); }
+  updatePack();
+
+  if(!win.__v8AlertPatched){
+    win.__v8AlertPatched = true;
+    win.alert = function(message){ statusMessage(String(message || 'Notice.'), String(message || '').toLowerCase().includes('no open') ? 'info' : 'danger'); };
+    const oldConfirm = win.confirm;
+    win.confirm = function(message){
+      const msg = String(message || 'Confirm action?');
+      if(msg.toLowerCase().includes('clear') || msg.toLowerCase().includes('undo')){
+        return oldConfirm ? oldConfirm.call(win, msg) : true;
+      }
+      statusMessage(msg, 'info');
+      return false;
+    };
+  }
+
+  const finish = doc.getElementById('finishItem');
+  if(finish && !finish.dataset.v8Hooked){
+    finish.dataset.v8Hooked='yes';
+    finish.addEventListener('click', function(e){
+      const openItems = doc.querySelectorAll('#openItems .item');
+      const hasRealOpen = Array.from(openItems).some(x => !/no open items/i.test(x.textContent || ''));
+      if(!hasRealOpen){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        statusMessage('No open item to finish. Start one first, or keep logging.', 'info');
+        finish.classList.add('noOpen');
+        finish.textContent='No Open Item';
+        setTimeout(()=>{ finish.classList.remove('noOpen'); finish.textContent='Finish Open Item'; }, 1800);
+      }
+    }, true);
+  }
+}
+
+frame.addEventListener('load', () => {
+  setTimeout(injectPacksAndMessages, 300);
+  setTimeout(injectPacksAndMessages, 1000);
+  setInterval(injectPacksAndMessages, 2000);
+});
+</script>
+</body>
+</html>
