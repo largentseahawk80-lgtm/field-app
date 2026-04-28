@@ -1,16 +1,16 @@
-# LinerSync Mythos V6 — User Guide and Development Manual
+# LinerSync Mythos V7 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v6.html`
+Live test build: `workflow-mythos-v7.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v6.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v7.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V6 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V7 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,11 +26,28 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V6 Main Upgrade: Smart Capture Fields
+## V7 Main Upgrade: Visible Capture Packs
 
-V6 changes Capture so it no longer looks like one giant spreadsheet.
+V7 makes the Capture screen visually obvious.
 
-The form now hides fields that do not belong to the selected log type.
+When you select a log type, the app shows a large workflow pack banner:
+
+- **REPAIR PACK**
+- **AIR TEST PACK**
+- **DESTRUCTIVE TEST PACK**
+- **PANEL PACK**
+- **SEAM PACK**
+- **ROLL PACK**
+- **WEDGE TEST PACK**
+- **EXTRUSION TEST PACK**
+
+The goal is simple: you should immediately know what mode you are in before saving a log.
+
+V7 is a safe wrapper around V6. It loads V6 and injects the visible capture pack banner. That means V6 logic stays intact while the screen becomes clearer.
+
+## V6 Smart Capture Fields Still Apply
+
+The form hides fields that do not belong to the selected log type.
 
 ### Repair form
 
@@ -164,7 +181,7 @@ These belong mostly in Export review, not as constant interruptions.
 1. **Project** — select or create the project.
 2. **Setup** — enter constant job data and tech names.
 3. **GPS** — tap GPS so the app has location.
-4. **Capture** — choose the log type and save records.
+4. **Capture** — choose the log type and confirm the visible Capture Pack.
 5. **Logs** — review what was saved.
 6. **Export** — review cleanup items and export CSV / JSON / KML / report.
 7. **Guide** — open the built-in manual whenever the screen is confusing.
@@ -262,17 +279,25 @@ Exports available:
 - KML
 - Daily report
 
-V6 exports include additional smart capture fields such as orientation, length, width, roll used, station, critical, and review later.
+V7 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V6 so the field user does not have to remember what every tab does.
+The Guide tab is built into V6 underneath V7 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V7 Visible Capture Packs
+
+- Added `workflow-mythos-v7.html`.
+- V7 safely wraps V6 and injects a large visible Capture Pack banner.
+- Capture now clearly displays REPAIR PACK, AIR TEST PACK, DT PACK, PANEL PACK, SEAM PACK, ROLL PACK, WEDGE TEST PACK, or EXTRUSION TEST PACK.
+- The pack banner changes color and text based on selected log type.
+- V7 keeps V6 logic and data behavior intact.
 
 ### 2026-04-28 — V6 Smart Capture Fields
 
