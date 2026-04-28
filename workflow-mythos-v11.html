@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V11</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V11 Issue Jump Navigation...</div>
+<iframe id="appFrame" src="./workflow-mythos-v10.html?v=v11jump"></iframe>
+<script>
+const frame=document.getElementById('appFrame');
+const loading=document.getElementById('loading');
+function getDoc(){return frame.contentDocument||frame.contentWindow?.document;}
+function getWin(){return frame.contentWindow;}
+function statusMessage(message,tone='info'){
+ const doc=getDoc(); if(!doc)return;
+ const status=doc.getElementById('status');
+ if(status){status.textContent=message;status.style.fontWeight='900';status.style.color=tone==='danger'?'#c62828':tone==='good'?'#047857':tone==='warn'?'#9a3412':'#0d47a1';}
+ let toast=doc.getElementById('v11Toast');
+ if(!toast){toast=doc.createElement('div');toast.id='v11Toast';toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:12000;border:3px solid #9ec5ff;border-radius:18px;background:#ffffff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';doc.body.appendChild(toast);}
+ toast.textContent=message;toast.style.borderColor=tone==='danger'?'#fda4af':tone==='good'?'#86efac':tone==='warn'?'#fdba74':'#9ec5ff';toast.style.color=tone==='danger'?'#c62828':tone==='good'?'#047857':tone==='warn'?'#9a3412':'#0d47a1';toast.style.display='block';clearTimeout(toast._timer);toast._timer=setTimeout(()=>toast.style.display='none',2600);
+}
+function clickTab(name){const doc=getDoc();const tab=Array.from(doc.querySelectorAll('.tab')).find(b=>b.dataset.tab===name);if(tab)tab.click();}
+function focusField(id){const doc=getDoc();const el=doc.getElementById(id);if(el){setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();el.style.outline='4px solid #22c55e';el.style.boxShadow='0 0 0 6px rgba(34,197,94,.22)';setTimeout(()=>{el.style.outline='';el.style.boxShadow='';},2500);},250);}}
+function jumpToIssue(text){
+ const t=(text||'').toLowerCase();
+ if(t.includes('open workflow')){clickTab('capture');setTimeout(()=>{const box=getDoc().getElementById('openItems'); if(box)box.scrollIntoView({behavior:'smooth',block:'center'});},250);statusMessage('Jumped to Open Items. Finish or clear the open work.','info');return;}
+ if(t.includes('no logs')){clickTab('capture');statusMessage('Jumped to Capture. Save your first log.','info');return;}
+ if(t.includes('cell')||t.includes('pond')||t.includes('lagoon')){clickTab('setup');focusField('cell');statusMessage('Jumped to Setup: enter pond / cell / lagoon.','info');return;}
+ if(t.includes('roll')){clickTab('setup');focusField('roll');statusMessage('Jumped to Setup: enter active roll.','info');return;}
+ if(t.includes('gps')){clickTab('home');setTimeout(()=>{const p=getDoc().getElementById('v10GpsPanel');if(p)p.scrollIntoView({behavior:'smooth',block:'center'});const b=getDoc().getElementById('v10GetGps');if(b){b.style.outline='4px solid #22c55e';setTimeout(()=>b.style.outline='',2500);}},250);statusMessage('Jumped to GPS Quality. Tap Get GPS Fix.','info');return;}
+ if(t.includes('photo')){clickTab('capture');setTimeout(()=>{const p=getDoc().querySelector('label[for="photoInput"]');if(p){p.scrollIntoView({behavior:'smooth',block:'center'});p.style.outline='4px solid #22c55e';setTimeout(()=>p.style.outline='',2500);}},250);statusMessage('Jumped to Capture photo attachment.','info');return;}
+ if(t.includes('repair type')){clickTab('capture');focusField('repairType');statusMessage('Jumped to Repair Type.','info');return;}
+ if(t.includes('air test')||t.includes('pressure')||t.includes('5 minutes')){clickTab('capture');const type=getDoc().getElementById('type');if(type){type.value='Air Test';type.dispatchEvent(new Event('change',{bubbles:true}));}statusMessage('Jumped to Air Test capture fields.','info');return;}
+ if(t.includes('destructive')||t.includes('dt ')||t.includes('spacing')){clickTab('capture');const type=getDoc().getElementById('type');if(type){type.value='Destructive Test';type.dispatchEvent(new Event('change',{bubbles:true}));}statusMessage('Jumped to Destructive Test capture fields.','info');return;}
+ if(t.includes('seam')){clickTab('capture');const type=getDoc().getElementById('type');if(type){type.value='Seam';type.dispatchEvent(new Event('change',{bubbles:true}));}statusMessage('Jumped to Seam capture fields.','info');return;}
+ if(t.includes('panel')){clickTab('capture');const type=getDoc().getElementById('type');if(type){type.value='Panel';type.dispatchEvent(new Event('change',{bubbles:true}));}statusMessage('Jumped to Panel capture fields.','info');return;}
+ clickTab('export');statusMessage('Jumped to Export review for this item.','info');
+}
+function enhanceIssueItems(){
+ const doc=getDoc(); if(!doc)return;
+ const items=doc.querySelectorAll('.issueItem');
+ items.forEach(item=>{
+  if(item.dataset.v11Jump==='yes')return;
+  item.dataset.v11Jump='yes';
+  item.title='Tap to jump to this issue';
+  item.style.cursor='pointer';
+  item.style.position='relative';
+  item.style.paddingRight='110px';
+  const tag=doc.createElement('span');
+  tag.textContent='TAP TO FIX';
+  tag.style.cssText='position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:1000;background:#0d47a1;color:#fff;border-radius:999px;padding:5px 8px;';
+  item.appendChild(tag);
+  item.addEventListener('click',()=>jumpToIssue(item.textContent.replace('TAP TO FIX','')));
+ });
+}
+function injectV11(){
+ const doc=getDoc(); const win=getWin(); if(!doc||!win)return;
+ loading.style.display='none';
+ const title=doc.querySelector('.title'),sub=doc.querySelector('.sub');
+ if(title)title.textContent='LinerSync Mythos V11';
+ if(sub)sub.textContent='ISSUE JUMP NAVIGATION';
+ if(!doc.getElementById('v11-style')){
+  const style=doc.createElement('style');style.id='v11-style';style.textContent='.issueItem:hover{filter:brightness(.98);transform:translateY(-1px)} .issueItem{transition:transform .12s ease, filter .12s ease}';doc.head.appendChild(style);
+ }
+ enhanceIssueItems();
+ if(!win.__v11AlertPatched){win.__v11AlertPatched=true;const oldAlert=win.alert;win.alert=function(message){statusMessage(String(message||'Notice.'),'info');};}
+}
+frame.addEventListener('load',()=>{setTimeout(injectV11,500);setTimeout(injectV11,1200);setInterval(injectV11,1500);});
+</script>
+</body>
+</html>
