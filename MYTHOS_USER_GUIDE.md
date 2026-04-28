@@ -1,16 +1,16 @@
-# LinerSync Mythos V10 — User Guide and Development Manual
+# LinerSync Mythos V11 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v10.html`
+Live test build: `workflow-mythos-v11.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v10.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v11.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V10 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V11 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,33 +26,46 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V10 Main Upgrade: GPS Quality Panel
+## V11 Main Upgrade: Tap an Issue to Fix It
 
-V10 adds a clear GPS Quality panel on Home.
+V11 makes the red/yellow/green issue cards clickable.
 
-The panel shows:
+Each issue card now shows **TAP TO FIX**.
+
+When you tap an issue, Mythos jumps to the screen where that issue can be fixed.
+
+Examples:
+
+| Issue | Tap result |
+|---|---|
+| No logs saved | Opens Capture |
+| Project cell/pond/lagoon is missing | Opens Setup and focuses the cell field |
+| Active roll context is missing | Opens Setup and focuses active roll |
+| Open workflow item(s) | Opens Capture / Open Items area |
+| GPS issue | Opens Home GPS Quality panel |
+| Missing photo | Opens Capture photo attachment |
+| Missing repair type | Opens Capture repair type field |
+| Air test pressure / 5 minute issue | Opens Air Test capture fields |
+| DT spacing issue | Opens Destructive Test capture fields |
+| Seam issue | Opens Seam capture fields |
+| Panel issue | Opens Panel capture fields |
+
+This turns Mythos from a warning list into a navigation system.
+
+## V11 Keeps V10 GPS Quality Panel
+
+Home still includes GPS Quality:
 
 - GPS status
 - GPS source
 - Accuracy
 - Last fix time
 - Coordinates
-- A **Get GPS Fix** button
+- **Get GPS Fix** button
 
-The goal is to stop GPS from being just a vague red badge. You should know whether GPS is missing, usable, or good before you start saving field logs.
+## V11 Keeps V9 Open Item Workflow
 
-### GPS color logic
-
-- **Good GPS** — about ±10 meters or better.
-- **Usable GPS** — about ±30 meters or better.
-- **Poor GPS** — worse than about ±30 meters.
-- **Missing GPS** — no fix captured yet.
-
-Critical GPS warnings should still matter for records that need location, but the GPS panel gives you a simple place to check and retry.
-
-## V10 Keeps V9 Open Item Workflow
-
-V10 keeps the Start Open Item picker:
+Start Open Item picker still includes:
 
 - Start Repair
 - Start Panel
@@ -62,25 +75,15 @@ V10 keeps the Start Open Item picker:
 - Start Retest
 - Start Other
 
-Open items store type, number, start time, project context, cell, roll, panel, seam, GPS when available, and status OPEN.
-
 Finish Open Item loads the newest open item back into Capture.
 
-## V10 Keeps V8 Field-Friendly Messages
+## V11 Keeps V8 Field-Friendly Messages
 
 Normal workflow conditions should not block the screen with browser popups.
 
-For example:
+## V11 Keeps V7 Capture Packs
 
-```text
-No open item to finish. Start one first, or keep logging.
-```
-
-appears inside the app instead of in a browser alert.
-
-## V10 Keeps V7 Capture Packs
-
-V10 keeps the visible Capture Pack banner:
+V11 keeps the visible Capture Pack banner:
 
 - **REPAIR PACK**
 - **AIR TEST PACK**
@@ -90,8 +93,6 @@ V10 keeps the visible Capture Pack banner:
 - **ROLL PACK**
 - **WEDGE TEST PACK**
 - **EXTRUSION TEST PACK**
-
-The pack banner changes color and text based on selected log type.
 
 ## V6 Smart Capture Fields Still Apply
 
@@ -230,12 +231,13 @@ These belong mostly in Export review, not as constant interruptions.
 1. **Project** — select or create the project.
 2. **Setup** — enter constant job data and tech names.
 3. **GPS Quality** — tap **Get GPS Fix** before field logging.
-4. **Start Open Item** if you are starting work that may need to be finished later.
-5. **Capture** — choose the log type and confirm the visible Capture Pack.
-6. **Finish Open Item** when the open work is ready to complete.
-7. **Logs** — review what was saved.
-8. **Export** — review cleanup items and export CSV / JSON / KML / report.
-9. **Guide** — open the built-in manual whenever the screen is confusing.
+4. **Tap any issue card** if Mythos shows one and you want to jump directly to the fix.
+5. **Start Open Item** if you are starting work that may need to be finished later.
+6. **Capture** — choose the log type and confirm the visible Capture Pack.
+7. **Finish Open Item** when the open work is ready to complete.
+8. **Logs** — review what was saved.
+9. **Export** — review cleanup items and export CSV / JSON / KML / report.
+10. **Guide** — open the built-in manual whenever the screen is confusing.
 
 ## Setup Tab
 
@@ -301,7 +303,7 @@ Examples:
 - A failed test that needs repair or retest.
 - A destructive test cut that needs patch documentation.
 
-V10 keeps open items selectable and finishable.
+V11 keeps open items selectable and finishable.
 
 ## Logs Tab
 
@@ -334,17 +336,30 @@ Exports available:
 - KML
 - Daily report
 
-V10 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
+V11 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V6 underneath V10 so the field user does not have to remember what every tab does.
+The Guide tab is built into V6 underneath V11 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V11 Issue Jump Navigation
+
+- Added `workflow-mythos-v11.html`.
+- Red/yellow/green issue cards now show **TAP TO FIX**.
+- Tapping an issue jumps to the screen/field where it can be corrected.
+- Missing cell jumps to Setup cell field.
+- Missing roll jumps to Setup active roll field.
+- No logs saved jumps to Capture.
+- Open workflow items jump to Capture / Open Items.
+- GPS issues jump to GPS Quality.
+- Repair type, air test, DT, seam, panel, and photo issues route toward the right capture area.
+- V11 keeps V10 GPS panel, V9 open item workflow, V8 field messages, V7 capture packs, and V6 smart capture fields.
 
 ### 2026-04-28 — V10 GPS Quality Panel
 
