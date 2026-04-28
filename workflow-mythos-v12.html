@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V12</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V12 Fixed Issue Jump...</div>
+<iframe id="appFrame" src="./workflow-mythos-v10.html?v=v12deepjump"></iframe>
+<script>
+const frame=document.getElementById('appFrame');
+const loading=document.getElementById('loading');
+
+function outerDoc(){return frame.contentDocument||frame.contentWindow?.document;}
+function appDoc(){
+  const od=outerDoc();
+  const inner=od?.getElementById('appFrame');
+  return inner?.contentDocument || inner?.contentWindow?.document || od;
+}
+function appWin(){
+  const od=outerDoc();
+  const inner=od?.getElementById('appFrame');
+  return inner?.contentWindow || frame.contentWindow;
+}
+function statusMessage(message,tone='info'){
+ const doc=appDoc(); if(!doc)return;
+ const status=doc.getElementById('status');
+ if(status){status.textContent=message;status.style.fontWeight='900';status.style.color=tone==='danger'?'#c62828':tone==='good'?'#047857':tone==='warn'?'#9a3412':'#0d47a1';}
+ let toast=doc.getElementById('v12Toast');
+ if(!toast){toast=doc.createElement('div');toast.id='v12Toast';toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:12000;border:3px solid #9ec5ff;border-radius:18px;background:#ffffff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';doc.body.appendChild(toast);}
+ toast.textContent=message;toast.style.borderColor=tone==='danger'?'#fda4af':tone==='good'?'#86efac':tone==='warn'?'#fdba74':'#9ec5ff';toast.style.color=tone==='danger'?'#c62828':tone==='good'?'#047857':tone==='warn'?'#9a3412':'#0d47a1';toast.style.display='block';clearTimeout(toast._timer);toast._timer=setTimeout(()=>toast.style.display='none',2600);
+}
+function clickTab(name){const doc=appDoc();const tab=Array.from(doc.querySelectorAll('.tab')).find(b=>b.dataset.tab===name);if(tab)tab.click();}
+function focusField(fieldId){const doc=appDoc();const el=doc.getElementById(fieldId);if(el){setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();el.style.outline='5px solid #22c55e';el.style.boxShadow='0 0 0 7px rgba(34,197,94,.22)';setTimeout(()=>{el.style.outline='';el.style.boxShadow='';},2800);},300);}}
+function setCaptureType(typeName){const doc=appDoc();const type=doc.getElementById('type');if(type){type.value=typeName;type.dispatchEvent(new Event('change',{bubbles:true}));}}
+function highlightElement(selector,message){const doc=appDoc();setTimeout(()=>{const el=doc.querySelector(selector);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.outline='5px solid #22c55e';el.style.boxShadow='0 0 0 7px rgba(34,197,94,.22)';setTimeout(()=>{el.style.outline='';el.style.boxShadow='';},2800);} if(message)statusMessage(message,'info');},300);}
+function jumpToIssue(text){
+ const t=(text||'').replace('TAP TO FIX','').toLowerCase();
+ if(t.includes('open workflow')){clickTab('capture');highlightElement('#openItems','Jumped to Open Items. Finish or clear open work.');return;}
+ if(t.includes('no logs')){clickTab('capture');statusMessage('Jumped to Capture. Save your first log.','info');return;}
+ if(t.includes('cell')||t.includes('pond')||t.includes('lagoon')){clickTab('setup');focusField('cell');statusMessage('Jumped to Setup: enter pond / cell / lagoon.','info');return;}
+ if(t.includes('roll')){clickTab('setup');focusField('roll');statusMessage('Jumped to Setup: enter active roll.','info');return;}
+ if(t.includes('gps')){clickTab('home');highlightElement('#v10GpsPanel','Jumped to GPS Quality. Tap Get GPS Fix.');return;}
+ if(t.includes('photo')){clickTab('capture');highlightElement('label[for="photoInput"]','Jumped to Capture photo attachment.');return;}
+ if(t.includes('repair type')){clickTab('capture');setCaptureType('Repair');focusField('repairType');statusMessage('Jumped to Repair Type.','info');return;}
+ if(t.includes('air test')||t.includes('pressure')||t.includes('5 minute')||t.includes('5 minutes')){clickTab('capture');setCaptureType('Air Test');statusMessage('Jumped to Air Test capture fields.','info');return;}
+ if(t.includes('destructive')||t.includes('dt ')||t.includes('spacing')){clickTab('capture');setCaptureType('Destructive Test');statusMessage('Jumped to Destructive Test capture fields.','info');return;}
+ if(t.includes('seam')){clickTab('capture');setCaptureType('Seam');statusMessage('Jumped to Seam capture fields.','info');return;}
+ if(t.includes('panel')){clickTab('capture');setCaptureType('Panel');statusMessage('Jumped to Panel capture fields.','info');return;}
+ clickTab('export');statusMessage('Jumped to Export review for this item.','info');
+}
+function enhanceIssueItems(){
+ const doc=appDoc(); if(!doc)return;
+ const items=doc.querySelectorAll('.issueItem');
+ items.forEach(item=>{
+  if(item.dataset.v12Jump==='yes')return;
+  item.dataset.v12Jump='yes';
+  item.title='Tap to jump to this issue';
+  item.style.cursor='pointer';
+  item.style.position='relative';
+  item.style.paddingRight='110px';
+  const tag=doc.createElement('span');
+  tag.textContent='TAP TO FIX';
+  tag.style.cssText='position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:1000;background:#0d47a1;color:#fff;border-radius:999px;padding:5px 8px;pointer-events:none;';
+  item.appendChild(tag);
+  item.addEventListener('click',()=>jumpToIssue(item.textContent||''));
+ });
+}
+function injectV12(){
+ const od=outerDoc(); const doc=appDoc(); const win=appWin(); if(!doc||!win)return;
+ loading.style.display='none';
+ const title=doc.querySelector('.title'),sub=doc.querySelector('.sub');
+ if(title)title.textContent='LinerSync Mythos V12';
+ if(sub)sub.textContent='FIXED ISSUE JUMP NAVIGATION';
+ if(!doc.getElementById('v12-style')){
+  const style=doc.createElement('style');style.id='v12-style';style.textContent='.issueItem:hover{filter:brightness(.98);transform:translateY(-1px)} .issueItem{transition:transform .12s ease, filter .12s ease}';doc.head.appendChild(style);
+ }
+ enhanceIssueItems();
+ if(!win.__v12AlertPatched){win.__v12AlertPatched=true;win.alert=function(message){statusMessage(String(message||'Notice.'),'info');};}
+}
+frame.addEventListener('load',()=>{setTimeout(injectV12,900);setTimeout(injectV12,1800);setInterval(injectV12,1200);});
+</script>
+</body>
+</html>
