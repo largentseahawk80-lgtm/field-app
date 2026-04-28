@@ -1,16 +1,16 @@
-# LinerSync Mythos V5 — User Guide and Development Manual
+# LinerSync Mythos V6 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v5.html`
+Live test build: `workflow-mythos-v6.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v5.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v6.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V5 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V6 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,11 +26,91 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V5 Home Dashboard
+## V6 Main Upgrade: Smart Capture Fields
 
-V5 changes the Home dashboard labels so the screen matches the quiet QC logic.
+V6 changes Capture so it no longer looks like one giant spreadsheet.
 
-Home now shows:
+The form now hides fields that do not belong to the selected log type.
+
+### Repair form
+
+Shows mainly:
+
+- Technician
+- Repair type
+- Result
+- Notes
+- Photo
+
+### Air Test form
+
+Shows mainly:
+
+- Technician
+- Result
+- Air hold minutes
+- Start pressure
+- End pressure
+- Notes
+- Photo
+
+### Destructive Test form
+
+Shows mainly:
+
+- Technician
+- Result
+- DT spacing feet
+- Station / footage
+- Notes
+- Photo
+
+### Panel form
+
+Shows mainly:
+
+- Roll used / roll number
+- Orientation / slope
+- Station / footage
+- Length feet
+- Width feet
+- Notes
+- Photo
+
+### Seam form
+
+Shows mainly:
+
+- Technician
+- Result
+- Panel A
+- Panel B
+- Orientation / slope
+- Station / footage
+- Length feet
+- Notes
+- Photo
+
+### Roll Use form
+
+Shows mainly:
+
+- Roll used / roll number
+- Notes
+- Photo
+
+### Wedge / Extrusion Test form
+
+Shows mainly:
+
+- Technician
+- Result
+- Notes
+- Photo
+
+## Home Dashboard
+
+Home shows:
 
 - **Logs** — number of saved logs.
 - **Open** — number of open workflow items.
@@ -79,20 +159,6 @@ Examples:
 
 These belong mostly in Export review, not as constant interruptions.
 
-## Suggestions
-
-Suggestions are not active issues.
-
-Examples:
-
-- Fill liner type
-- Fill liner thickness
-- Add optional notes
-- Add photo if useful
-- Review export before leaving site
-
-Suggestions should help, not boss you around.
-
 ## The Simple Field Flow
 
 1. **Project** — select or create the project.
@@ -129,37 +195,6 @@ Current setup fields:
 - **Air Testers** — used for Air Test.
 
 Names can be separated by commas or one per line.
-
-## Capture Tab
-
-Capture is where field logs are created.
-
-Current log types:
-
-- Repair
-- Roll Use
-- Panel
-- Seam
-- Wedge Test
-- Extrusion Test
-- Air Test
-- Destructive Test
-
-Capture fields include:
-
-- Log type
-- Auto number
-- Technician dropdown
-- Repair type
-- Result
-- Air hold minutes
-- DT spacing feet
-- Start pressure
-- End pressure
-- Station / footage
-- Orientation / slope
-- Notes
-- Photo attachment
 
 ## Technician Dropdown Rules
 
@@ -227,36 +262,29 @@ Exports available:
 - KML
 - Daily report
 
-V5 exports include separate columns/sections for Critical and Review Later.
+V6 exports include additional smart capture fields such as orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V5 so the field user does not have to remember what every tab does.
-
-## What Mythos Is Doing Behind the Screen
-
-Mythos is calculating:
-
-- GPS confidence
-- Critical field blockers
-- Review Later cleanup items
-- Suggestions
-- Export readiness score
-- Top 3 critical issues
-- Top 3 review-later items
-- Next action
-- Open follow-up items
-- Log validation
-- Carry-forward constants
-- Technician dropdown options
-- Failed test follow-up needs
-- DT patch follow-up needs
+The Guide tab is built into V6 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V6 Smart Capture Fields
+
+- Added `workflow-mythos-v6.html`.
+- Capture now hides irrelevant fields based on log type.
+- Added smart capture hint text for each log type.
+- Added Panel A / Panel B fields for seams.
+- Added Roll Used field for roll and panel workflows.
+- Added Length feet and Width feet fields for panel/seam workflows.
+- CSV export now includes orientation, length, width, station, roll used, critical, and review-later fields.
+- V6 uses local storage key `linersync-mythos-v6` so it does not corrupt V5 test data.
+- V6 keeps quiet QC mode: Critical blocks save, Review Later does not.
 
 ### 2026-04-28 — V5 Quiet QC Dashboard
 
