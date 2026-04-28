@@ -1,16 +1,16 @@
-# LinerSync Mythos V7 — User Guide and Development Manual
+# LinerSync Mythos V8 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v7.html`
+Live test build: `workflow-mythos-v8.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v7.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v8.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V7 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V8 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,11 +26,29 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V7 Main Upgrade: Visible Capture Packs
+## V8 Main Upgrade: Field-Friendly Messages
 
-V7 makes the Capture screen visually obvious.
+V8 removes normal workflow popups.
 
-When you select a log type, the app shows a large workflow pack banner:
+Before V8, tapping **Finish Open Item** with no open item could throw a browser popup saying:
+
+```text
+No open item.
+```
+
+That is technically correct, but bad field behavior. It blocks the screen and makes the app feel janky.
+
+V8 changes that to an in-app message:
+
+```text
+No open item to finish. Start one first, or keep logging.
+```
+
+The message appears in the app status/toast area instead of locking the screen with a browser alert.
+
+## V8 Keeps V7 Capture Packs
+
+V8 keeps the visible Capture Pack banner:
 
 - **REPAIR PACK**
 - **AIR TEST PACK**
@@ -41,9 +59,7 @@ When you select a log type, the app shows a large workflow pack banner:
 - **WEDGE TEST PACK**
 - **EXTRUSION TEST PACK**
 
-The goal is simple: you should immediately know what mode you are in before saving a log.
-
-V7 is a safe wrapper around V6. It loads V6 and injects the visible capture pack banner. That means V6 logic stays intact while the screen becomes clearer.
+The pack banner changes color and text based on selected log type.
 
 ## V6 Smart Capture Fields Still Apply
 
@@ -248,6 +264,8 @@ Examples:
 - A failed test that needs repair or retest.
 - A destructive test that needs a patch record.
 
+In V8, if there is no open item and you tap **Finish Open Item**, Mythos shows an in-app message instead of a browser popup.
+
 ## Logs Tab
 
 The Logs tab shows saved records.
@@ -279,17 +297,26 @@ Exports available:
 - KML
 - Daily report
 
-V7 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
+V8 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V6 underneath V7 so the field user does not have to remember what every tab does.
+The Guide tab is built into V6 underneath V8 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V8 Field-Friendly Messages
+
+- Added `workflow-mythos-v8.html`.
+- V8 safely wraps V6 and keeps the V7 visible Capture Pack banner.
+- Replaced normal workflow browser alert behavior with in-app status/toast messages.
+- Tapping **Finish Open Item** with no open item now shows: `No open item to finish. Start one first, or keep logging.`
+- The **Finish Open Item** button temporarily changes to **No Open Item** instead of blocking the screen.
+- V8 keeps V6 logic and data behavior intact.
 
 ### 2026-04-28 — V7 Visible Capture Packs
 
