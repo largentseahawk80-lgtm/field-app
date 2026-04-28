@@ -1,16 +1,16 @@
-# LinerSync Mythos V8 — User Guide and Development Manual
+# LinerSync Mythos V9 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v8.html`
+Live test build: `workflow-mythos-v9.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v8.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v9.html`
 
 ## Purpose
 
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V8 workflow without guessing.
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V9 workflow without guessing.
 
 Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
@@ -26,29 +26,65 @@ It separates checks into three buckets:
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
 
-## V8 Main Upgrade: Field-Friendly Messages
+## V9 Main Upgrade: Real Open Item Workflow
 
-V8 removes normal workflow popups.
+V9 makes **Start Open Item** useful.
 
-Before V8, tapping **Finish Open Item** with no open item could throw a browser popup saying:
+Instead of starting a vague item, V9 opens a picker with:
+
+- Start Repair
+- Start Panel
+- Start Seam
+- Start Air Test
+- Start DT Patch
+- Start Retest
+- Start Other
+
+When you pick one, Mythos creates an open item with:
+
+- Open item type
+- Open item number
+- Start time
+- Project context
+- Cell context
+- Active roll context
+- Active panel context
+- Active seam context
+- Status: OPEN
+
+The Open Items box then shows the item as real work to finish later.
+
+## Finish Open Item
+
+When you tap **Finish Open Item**, V9 loads the newest open item back into Capture.
+
+Example:
 
 ```text
-No open item.
+Repair — R-OPEN-001
+Started 3:45 PM
+Status OPEN
 ```
 
-That is technically correct, but bad field behavior. It blocks the screen and makes the app feel janky.
+When finished, Mythos loads the correct Capture Pack and fills the open item number so you can complete and save the record.
 
-V8 changes that to an in-app message:
+If there is no open item, V9 shows an in-app message instead of a browser popup.
+
+## V9 Keeps V8 Field-Friendly Messages
+
+Normal workflow conditions should not block the screen with browser popups.
+
+For example:
 
 ```text
 No open item to finish. Start one first, or keep logging.
 ```
 
-The message appears in the app status/toast area instead of locking the screen with a browser alert.
+appears inside the app instead of in a browser alert.
 
-## V8 Keeps V7 Capture Packs
+## V9 Keeps V7 Capture Packs
 
-V8 keeps the visible Capture Pack banner:
+V9 keeps the visible Capture Pack banner:
 
 - **REPAIR PACK**
 - **AIR TEST PACK**
@@ -197,10 +233,12 @@ These belong mostly in Export review, not as constant interruptions.
 1. **Project** — select or create the project.
 2. **Setup** — enter constant job data and tech names.
 3. **GPS** — tap GPS so the app has location.
-4. **Capture** — choose the log type and confirm the visible Capture Pack.
-5. **Logs** — review what was saved.
-6. **Export** — review cleanup items and export CSV / JSON / KML / report.
-7. **Guide** — open the built-in manual whenever the screen is confusing.
+4. **Start Open Item** if you are starting work that may need to be finished later.
+5. **Capture** — choose the log type and confirm the visible Capture Pack.
+6. **Finish Open Item** when the open work is ready to complete.
+7. **Logs** — review what was saved.
+8. **Export** — review cleanup items and export CSV / JSON / KML / report.
+9. **Guide** — open the built-in manual whenever the screen is confusing.
 
 ## Setup Tab
 
@@ -260,11 +298,13 @@ Open items are things Mythos believes still need follow-up.
 
 Examples:
 
-- A started repair that has not been finished.
+- A repair that was started but not finished yet.
+- A panel placement started before final details are ready.
+- A seam that needs more information later.
 - A failed test that needs repair or retest.
-- A destructive test that needs a patch record.
+- A destructive test cut that needs patch documentation.
 
-In V8, if there is no open item and you tap **Finish Open Item**, Mythos shows an in-app message instead of a browser popup.
+V9 makes open items selectable and finishable instead of vague.
 
 ## Logs Tab
 
@@ -297,17 +337,29 @@ Exports available:
 - KML
 - Daily report
 
-V8 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
+V9 uses V6 exports underneath, including orientation, length, width, roll used, station, critical, and review later.
 
 ## Guide Tab
 
-The Guide tab is built into V6 underneath V8 so the field user does not have to remember what every tab does.
+The Guide tab is built into V6 underneath V9 so the field user does not have to remember what every tab does.
 
 ## Current Development Rule
 
 Every repo development edit should also update this guide when the change affects user workflow, field data, app behavior, exports, warning logic, or screen layout.
 
 ## Development Change Log
+
+### 2026-04-28 — V9 Open Item Workflow
+
+- Added `workflow-mythos-v9.html`.
+- Added a Start Open Item picker with Repair, Panel, Seam, Air Test, DT Patch, Retest, and Other.
+- Open items now store type, number, start time, project context, cell, roll, panel, seam, and status OPEN.
+- Open Items box now lists real open work instead of a vague item.
+- Finish Open Item loads the newest open item back into Capture.
+- DT Patch maps into Repair capture.
+- Retest maps into Wedge Test capture for now.
+- V9 keeps V8 field-friendly no-popup behavior.
+- V9 keeps V7 visible Capture Packs and V6 smart capture fields.
 
 ### 2026-04-28 — V8 Field-Friendly Messages
 
