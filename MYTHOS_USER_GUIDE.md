@@ -1,22 +1,22 @@
-# LinerSync Mythos V4 — User Guide and Development Manual
+# LinerSync Mythos V5 — User Guide and Development Manual
 
 Last updated: 2026-04-28
 Repo: `largentseahawk80-lgtm/field-app`
-Live test build: `workflow-mythos-v4.html`
-
-## Purpose
-
-This guide explains what Mythos does inside the LinerSync field app and how to use the current V4 workflow without guessing.
-
-Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
+Live test build: `workflow-mythos-v5.html`
 
 ## Current Live Test Link
 
-`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v4.html`
+`https://largentseahawk80-lgtm.github.io/field-app/workflow-mythos-v5.html`
+
+## Purpose
+
+This guide explains what Mythos does inside the LinerSync field app and how to use the current V5 workflow without guessing.
+
+Mythos is the workflow brain running behind the app. It watches project setup, active roll, active panel, active seam, GPS, technician names, photos, tests, warnings, open items, logs, and exports.
 
 ## Big Rule: Mythos Should Not Nag You All Day
 
-Mythos now uses quiet field QC mode.
+Mythos uses quiet field QC mode.
 
 It separates checks into three buckets:
 
@@ -25,6 +25,23 @@ It separates checks into three buckets:
 3. **Suggestions** — helpful notes only, not counted as issues.
 
 This is meant to keep you focused on real QC responsibility instead of babysitting the app.
+
+## V5 Home Dashboard
+
+V5 changes the Home dashboard labels so the screen matches the quiet QC logic.
+
+Home now shows:
+
+- **Logs** — number of saved logs.
+- **Open** — number of open workflow items.
+- **Critical** — items that need action now.
+- **Review Later** — cleanup items for end-of-day/export.
+- **Critical Now** — top 3 critical blockers.
+- **Review Later** — top 3 cleanup items.
+- **Next action** — what Mythos thinks should happen next.
+- **Latest Logs** — newest saved records.
+
+Critical and Review Later are intentionally separated so cleanup items do not feel like field blockers.
 
 ## Critical Items
 
@@ -85,21 +102,6 @@ Suggestions should help, not boss you around.
 5. **Logs** — review what was saved.
 6. **Export** — review cleanup items and export CSV / JSON / KML / report.
 7. **Guide** — open the built-in manual whenever the screen is confusing.
-
-## Home Tab
-
-The Home tab is the command center.
-
-It shows:
-
-- **Logs** — number of saved logs.
-- **Open** — number of open workflow items.
-- **Ready** — export readiness score.
-- **Issues** — now means critical field issues only.
-- **Next action** — what Mythos thinks you should do next.
-- **Top 3 Active Issues** — the top critical items only.
-- **Fast Workflow buttons** — quick launch buttons for Roll Use, Panel, Seam, Repair, Wedge Test, Air Test, DT, and Guide.
-- **Latest Logs** — newest saved records.
 
 ## Setup Tab
 
@@ -176,7 +178,7 @@ Capture fields include:
 
 Tap **Save Log** after entering the needed information.
 
-Mythos now only blocks for **Critical** items. Review Later items should not stop normal logging.
+Mythos only blocks for **Critical** items. Review Later items should not stop normal logging.
 
 ## Save Override
 
@@ -204,7 +206,8 @@ Each log shows:
 - Log type
 - Time
 - Override status
-- Warning count
+- Critical count
+- Review Later count
 - Technician
 - Roll
 - Panel
@@ -215,7 +218,7 @@ Each log shows:
 
 ## Export Tab
 
-Export is where review cleanup belongs.
+Export is where Review Later cleanup belongs.
 
 Exports available:
 
@@ -224,9 +227,11 @@ Exports available:
 - KML
 - Daily report
 
+V5 exports include separate columns/sections for Critical and Review Later.
+
 ## Guide Tab
 
-The Guide tab is built into V4 so the field user does not have to remember what every tab does.
+The Guide tab is built into V5 so the field user does not have to remember what every tab does.
 
 ## What Mythos Is Doing Behind the Screen
 
@@ -237,7 +242,8 @@ Mythos is calculating:
 - Review Later cleanup items
 - Suggestions
 - Export readiness score
-- Top 3 active critical issues
+- Top 3 critical issues
+- Top 3 review-later items
 - Next action
 - Open follow-up items
 - Log validation
@@ -252,13 +258,23 @@ Every repo development edit should also update this guide when the change affect
 
 ## Development Change Log
 
+### 2026-04-28 — V5 Quiet QC Dashboard
+
+- Added `workflow-mythos-v5.html`.
+- Changed Home dashboard labels from generic `Issues` to separate **Critical** and **Review Later** counters.
+- Added separate Home sections for **Critical Now** and **Review Later**.
+- Capture now saves Review Later items without blocking normal work.
+- CSV export now includes separate `critical` and `review_later` columns.
+- Daily Report now separates Critical and Review Later sections.
+- V5 uses local storage key `linersync-mythos-v5` so it does not corrupt V4 test data.
+- V5 loads `mythos-field-brain.js?v=0.2.0` to avoid stale browser cache.
+
 ### 2026-04-28 — Quiet Field QC warning mode
 
 - Updated `mythos-field-brain.js` to Version 0.2.0.
 - Split warning logic into Critical, Review Later, and Suggestions.
 - Capture now only interrupts for Critical items.
 - Missing photo, weak-but-usable GPS, missing tech name, missing station, and similar cleanup items are Review Later instead of field blockers.
-- Home issue count now represents critical issues only because V4 reads `readiness.issues` from the updated brain.
 - Export readiness still tracks review cleanup for end-of-day review.
 
 ### 2026-04-28 — V4 built-in Guide tab
