@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LinerSync Mythos V9</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#f8fbff;font-family:Arial,Helvetica,sans-serif}
+#appFrame{border:0;width:100%;height:100vh;display:block;background:#f8fbff}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#f8fbff;color:#0d47a1;font-weight:900;z-index:5}
+</style>
+</head>
+<body>
+<div id="loading">Loading Mythos V9 Open Item Workflow...</div>
+<iframe id="appFrame" src="./workflow-mythos-v6.html?v=v9openitems"></iframe>
+<script>
+const frame = document.getElementById('appFrame');
+const loading = document.getElementById('loading');
+
+const PACKS = {
+  'Repair': { title:'REPAIR PACK', color:'#c62828', text:'Patch / bead / repair point. Required now: GPS + repair type. Photo is review-later.' },
+  'Air Test': { title:'AIR TEST PACK', color:'#0d47a1', text:'Air test record. Critical: 5 minute hold, start pressure, end pressure, and result.' },
+  'Destructive Test': { title:'DESTRUCTIVE TEST PACK', color:'#7c2d12', text:'DT record. Watch 500 ft spacing and station/footage for export cleanup.' },
+  'DT Patch': { title:'DT PATCH PACK', color:'#7c2d12', text:'Finish the patch created by a destructive test cut.' },
+  'Retest': { title:'RETEST PACK', color:'#be123c', text:'Follow-up test after failed/repair work. Capture result and notes.' },
+  'Panel': { title:'PANEL PACK', color:'#15803d', text:'Panel placement. Track roll used, orientation/slope, station, length, and width.' },
+  'Seam': { title:'SEAM PACK', color:'#1976d2', text:'Seam record. Tie panel A/B, station, orientation, length, tech, and result.' },
+  'Roll Use': { title:'ROLL PACK', color:'#1e3a8a', text:'Roll inventory/use. Set active roll so Mythos can carry it forward.' },
+  'Wedge Test': { title:'WEDGE TEST PACK', color:'#9333ea', text:'Wedge weld test. Choose wedger and result. Failed test creates follow-up.' },
+  'Extrusion Test': { title:'EXTRUSION TEST PACK', color:'#be123c', text:'Extrusion / hand weld test. Choose welder and result. Failed test creates follow-up.' },
+  'Other': { title:'OPEN ITEM PACK', color:'#334155', text:'General open QC item. Add notes and finish when complete.' }
+};
+
+const OPEN_CHOICES = [
+  { label:'Start Repair', type:'Repair' },
+  { label:'Start Panel', type:'Panel' },
+  { label:'Start Seam', type:'Seam' },
+  { label:'Start Air Test', type:'Air Test' },
+  { label:'Start DT Patch', type:'DT Patch' },
+  { label:'Start Retest', type:'Retest' },
+  { label:'Start Other', type:'Other' }
+];
+
+function getDoc(){ return frame.contentDocument || frame.contentWindow?.document; }
+function getWin(){ return frame.contentWindow; }
+function statusMessage(message, tone='info'){
+  const doc = getDoc();
+  if(!doc) return;
+  const status = doc.getElementById('status');
+  if(status){
+    status.textContent = message;
+    status.style.fontWeight = '900';
+    status.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : '#0d47a1';
+  }
+  let toast = doc.getElementById('v9Toast');
+  if(!toast){
+    toast = doc.createElement('div');
+    toast.id='v9Toast';
+    toast.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:9999;border:3px solid #9ec5ff;border-radius:18px;background:#ffffff;color:#0d47a1;padding:14px;font-weight:1000;box-shadow:0 8px 28px rgba(13,71,161,.25);display:none;text-align:center;';
+    doc.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.style.borderColor = tone === 'danger' ? '#fda4af' : tone === 'good' ? '#86efac' : '#9ec5ff';
+  toast.style.color = tone === 'danger' ? '#c62828' : tone === 'good' ? '#047857' : '#0d47a1';
+  toast.style.display='block';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=>{ toast.style.display='none'; }, 2800);
+}
+
+function openItemStore(){
+  try { return JSON.parse(localStorage.getItem('linersync-mythos-v9-open-items') || '[]'); }
+  catch(e){ return []; }
+}
+function saveOpenItems(items){ localStorage.setItem('linersync-mythos-v9-open-items', JSON.stringify(items)); }
+function makeOpenNumber(type){
+  const prefix = type === 'Repair' ? 'R' : type === 'Panel' ? 'P' : type === 'Seam' ? 'S' : type === 'Air Test' ? 'AT' : type === 'DT Patch' ? 'DTP' : type === 'Retest' ? 'RT' : 'OPEN';
+  const count = openItemStore().filter(x => x.type === type).length + 1;
+  return prefix + '-OPEN-' + String(count).padStart(3,'0');
+}
+
+function currentContext(){
+  const doc = getDoc();
+  const badgeText = Array.from(doc?.querySelectorAll('.badge') || []).map(x => x.textContent || '');
+  return {
+    project: doc?.getElementById('projectSelect')?.selectedOptions?.[0]?.textContent || 'Default Project',
+    cell: (badgeText.find(x => /^Cell /i.test(x)) || '').replace(/^Cell /i,'') || '',
+    roll: (badgeText.find(x => /^Roll /i.test(x)) || '').replace(/^Roll /i,'') || '',
+    panel: (badgeText.find(x => /^Panel /i.test(x)) || '').replace(/^Panel /i,'') || '',
+    seam: (badgeText.find(x => /^Seam /i.test(x)) || '').replace(/^Seam /i,'') || '',
+    startedAt: new Date().toISOString()
+  };
+}
+
+function createPicker(){
+  const doc = getDoc();
+  if(!doc || doc.getElementById('v9OpenPicker')) return;
+  const overlay = doc.createElement('div');
+  overlay.id = 'v9OpenPicker';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;display:none;place-items:center;padding:18px;';
+  overlay.innerHTML = `
+    <div style="width:min(620px,100%);background:#fff;border:3px solid #9ec5ff;border-radius:24px;padding:16px;box-shadow:0 14px 38px rgba(0,0,0,.28);">
+      <div style="font-size:22px;font-weight:1000;color:#0d47a1;margin-bottom:6px;">Start Open Item</div>
+      <div style="font-size:14px;font-weight:900;color:#315b94;margin-bottom:12px;">Pick what you are starting. Mythos will keep it open until you finish it.</div>
+      <div id="v9OpenChoices" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+      <button id="v9CancelOpen" style="margin-top:12px;width:100%;min-height:52px;border:2px solid #9ec5ff;border-radius:16px;background:#fff;color:#0d47a1;font-weight:1000;">Cancel</button>
+    </div>`;
+  doc.body.appendChild(overlay);
+  const choices = overlay.querySelector('#v9OpenChoices');
+  OPEN_CHOICES.forEach(choice => {
+    const btn = doc.createElement('button');
+    btn.textContent = choice.label;
+    btn.style.cssText = 'min-height:56px;border:2px solid #9ec5ff;border-radius:16px;background:#1976d2;color:#fff;font-weight:1000;';
+    btn.onclick = () => { overlay.style.display='none'; startOpenItem(choice.type); };
+    choices.appendChild(btn);
+  });
+  overlay.querySelector('#v9CancelOpen').onclick = () => { overlay.style.display='none'; statusMessage('Open item start cancelled. Keep logging.', 'info'); };
+}
+
+function showPicker(){
+  createPicker();
+  const doc = getDoc();
+  const picker = doc.getElementById('v9OpenPicker');
+  if(picker) picker.style.display = 'grid';
+}
+
+function startOpenItem(type){
+  const ctx = currentContext();
+  const number = makeOpenNumber(type);
+  const item = { id: Date.now() + '-' + Math.random().toString(36).slice(2,7), type, number, status:'OPEN', ...ctx };
+  const items = openItemStore();
+  items.push(item);
+  saveOpenItems(items);
+  renderV9OpenItems();
+  statusMessage('Started open item: ' + type + ' ' + number, 'good');
+}
+
+function mapOpenTypeToCapture(type){
+  if(type === 'DT Patch') return 'Repair';
+  if(type === 'Retest') return 'Wedge Test';
+  if(type === 'Other') return 'Repair';
+  return type;
+}
+
+function finishOpenItem(){
+  const items = openItemStore();
+  if(!items.length){
+    statusMessage('No open item to finish. Start one first, or keep logging.', 'info');
+    const doc = getDoc();
+    const finish = doc?.getElementById('finishItem');
+    if(finish){ finish.textContent='No Open Item'; setTimeout(()=>{ finish.textContent='Finish Open Item'; }, 1600); }
+    return;
+  }
+  const item = items.pop();
+  saveOpenItems(items);
+  const doc = getDoc();
+  const captureType = mapOpenTypeToCapture(item.type);
+  const typeSelect = doc.getElementById('type');
+  const numberInput = doc.getElementById('number');
+  const notes = doc.getElementById('notes');
+  if(typeSelect){ typeSelect.value = captureType; typeSelect.dispatchEvent(new Event('change', { bubbles:true })); }
+  if(numberInput) numberInput.value = item.number;
+  if(notes){
+    const existing = notes.value ? notes.value + '\n' : '';
+    notes.value = existing + 'Finished open item: ' + item.type + ' started ' + new Date(item.startedAt).toLocaleString([], { hour12:true }) + '.';
+  }
+  const capTab = Array.from(doc.querySelectorAll('.tab')).find(b => b.dataset.tab === 'capture');
+  if(capTab) capTab.click();
+  renderV9OpenItems();
+  updatePack();
+  statusMessage('Loaded ' + item.type + ' ' + item.number + ' into Capture to finish.', 'good');
+}
+
+function renderV9OpenItems(){
+  const doc = getDoc();
+  if(!doc) return;
+  const box = doc.getElementById('openItems');
+  if(!box) return;
+  const items = openItemStore();
+  if(!items.length){
+    box.innerHTML = '<div class="item">No open items</div>';
+    return;
+  }
+  box.innerHTML = '';
+  items.slice().reverse().forEach(item => {
+    const d = doc.createElement('div');
+    d.className = 'item';
+    d.innerHTML = '<b>' + item.type + ' — ' + item.number + '</b>' +
+      '<div class="itemMeta">Started ' + new Date(item.startedAt).toLocaleString([], { hour12:true }) + ' | Status OPEN</div>' +
+      '<div class="itemMeta">Roll ' + (item.roll || '') + ' | Panel ' + (item.panel || '') + ' | Seam ' + (item.seam || '') + '</div>';
+    box.appendChild(d);
+  });
+}
+
+function updatePack(){
+  const doc = getDoc();
+  if(!doc) return;
+  const type = doc.getElementById('type');
+  const pack = PACKS[type?.value] || PACKS.Repair;
+  const banner = doc.getElementById('v7PackBanner');
+  const pTitle = doc.getElementById('v7PackTitle');
+  const pText = doc.getElementById('v7PackText');
+  const strip = doc.getElementById('v7PackStrip');
+  if(banner) banner.style.borderColor = pack.color;
+  if(pTitle){ pTitle.textContent = pack.title; pTitle.style.color = pack.color; }
+  if(pText) pText.textContent = pack.text;
+  if(strip) strip.style.background = pack.color;
+}
+
+function injectV9(){
+  const doc = getDoc();
+  const win = getWin();
+  if(!doc || !win) return;
+  loading.style.display = 'none';
+  const title = doc.querySelector('.title');
+  const sub = doc.querySelector('.sub');
+  if(title) title.textContent = 'LinerSync Mythos V9';
+  if(sub) sub.textContent = 'OPEN ITEM WORKFLOW';
+
+  if(!doc.getElementById('v9-style')){
+    const style = doc.createElement('style');
+    style.id='v9-style';
+    style.textContent = `
+      #v7PackBanner{border:3px solid #0d47a1;border-radius:20px;padding:14px;margin:8px 0 12px 0;background:#fff;box-shadow:0 6px 18px rgba(13,71,161,.22)}
+      #v7PackTitle{font-size:24px;font-weight:1000;letter-spacing:.5px;color:#0d47a1;margin-bottom:6px}
+      #v7PackText{font-size:15px;font-weight:900;color:#0f172a;line-height:1.35}
+      #v7PackStrip{height:8px;border-radius:999px;background:#0d47a1;margin-top:10px}
+    `;
+    doc.head.appendChild(style);
+  }
+
+  const captureCard = doc.querySelector('#capture .card');
+  if(captureCard && !doc.getElementById('v7PackBanner')){
+    const banner = doc.createElement('div');
+    banner.id='v7PackBanner';
+    banner.innerHTML='<div id="v7PackTitle">CAPTURE PACK</div><div id="v7PackText">Choose a log type.</div><div id="v7PackStrip"></div>';
+    const hint = doc.getElementById('captureHint');
+    captureCard.insertBefore(banner, hint || captureCard.firstChild);
+  }
+
+  const type = doc.getElementById('type');
+  if(type && !type.dataset.v9PackHooked){ type.dataset.v9PackHooked='yes'; type.addEventListener('change', updatePack); }
+  updatePack();
+
+  if(!win.__v9AlertPatched){
+    win.__v9AlertPatched = true;
+    win.alert = function(message){ statusMessage(String(message || 'Notice.'), 'info'); };
+  }
+
+  const start = doc.getElementById('startItem');
+  if(start && !start.dataset.v9Hooked){
+    start.dataset.v9Hooked='yes';
+    start.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); showPicker(); }, true);
+  }
+  const finish = doc.getElementById('finishItem');
+  if(finish && !finish.dataset.v9Hooked){
+    finish.dataset.v9Hooked='yes';
+    finish.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); finishOpenItem(); }, true);
+  }
+  createPicker();
+  renderV9OpenItems();
+}
+
+frame.addEventListener('load', () => {
+  setTimeout(injectV9, 300);
+  setTimeout(injectV9, 1000);
+  setInterval(injectV9, 2000);
+});
+</script>
+</body>
+</html>
